@@ -12,33 +12,25 @@
 
 
 /* sweep function */
-void SWP(
-  double **X,             /* The Matrix to work on */
-  int k,                  /* The row to sweep */
-  int size);              /* The dim. of X */
-
-/* sweep function wrapper for array based matricies */
-/* R interface */
-void RSWP(
-  double * x,
-  int * kPtr,
-  int * kSizePtr,
-  int * sizePtr
-); 
-
-/* R interface */
-double * ASWP(
-  double * x,
-  int * kPtr,
-  int  kSizePtr,
-  int  sizePtr
+void VSWP(
+  double * v,
+  int i,
+  int n 
 );
 
+void printFullMatrix ( double * x, int n, int m );
+
 void printCovarMatrix ( double * x, int k );
+
 void copyCovarMatrix ( double * x, double * y, int k ); 
 
 /* sweepTree */
-void sweepTree( covarTreePtr x, double * V, int k, double ** matrixCache ); 
+void sweepTree( covarTreePtr x, double * V, int k, double ** matrixCache, double * estimates ); 
+
+/* save parameters */
+void saveParameterEstimates( double * V, int k, int i, double * estimates ); 
+
+
 
 
 #endif

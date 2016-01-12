@@ -2,104 +2,32 @@
 
 
 
-/******************************************************************
- *   This function is a part of MNP: R Package for Estimating the
- *     Multinomial Probit Models by Kosuke Imai and David A. van Dyk.
- *       Copyright: GPL version 2 or later.
- ********************************************************************/
-void SWP(
-  double **X,             /* The Matrix to work on */
-  int k,                  /* The row to sweep */
-  int size)               /* The dim. of X */
-{
-  int i,j;
-  
-  if(X[k][k] < 10e-20) {
-    printf("SWP: singular matrix.\n");
-    return;
-  }
-  else X[k][k]=-1/X[k][k];
-
-  for(i=0;i<size;i++)
-    if(i!=k){
-      X[i][k]=-X[i][k]*X[k][k];
-      X[k][i]=X[i][k];
-    }
-
-  for(i=0;i<size;i++) 
-  {
-    for(j=0;j<size;j++)
-    { 
-      if(i!=k && j!=k) X[i][j]=X[i][j]+X[i][k]*X[k][j]/X[k][k];
-    }
-  }
-
-  return;  
-}
 
 
 
-
-/* R interface */
-void RSWP(
-  double * x,
-  int * kPtr,
-  int * kSizePtr,
-  int * sizePtr
-) {
-  
-  size_t i;
-  double ** X;
-  
-  X = calloc( *sizePtr, sizeof(double *) );
-  for(i = 0; i < *sizePtr; i++) X[i] = &x[ *sizePtr * i ];
- 
-  for(i=0; i < *kSizePtr; i++) SWP(X, kPtr[i], *sizePtr);
-  
-  free(X);
+/* copy covar matrix function */
+void copyCovarMatrix ( double * x, double * y, int k ) {
+  int i;
+  for(i=0; i < (k*(k+1))/2; i++) x[i] = y[i];
   return;
 }
 
 
 
-/* Array interface */
-double * ASWP(
-  double * x,
-  int * kPtr,
-  int kSizePtr,
-  int sizePtr
-) {
-  
-  size_t i;
-  double ** X;
-  
-  X = calloc( sizePtr, sizeof(double *) );
-  for(i = 0; i < sizePtr; i++) X[i] = &x[ sizePtr * i ];
- 
-  for(i=0; i < kSizePtr; i++) SWP(X, kPtr[i], sizePtr);
-  
-  free(X);
-  return(x);
-}
 
+/* copy matrix function */
+void printFullMatrix ( double * x, int n, int m ) {
+  int i, j;
 
-
-
-/* print covar matrix function */
-void printCovarMatrix ( double * x, int k ) {
-
-  int i,j;
-
-  printf("\n\t");
-  for(i=0; i < k; i++) printf("%d\t", i);
+  for( i = 0; i < m; i++) printf("%d\t", i); 
   printf("\n");
-
-  for(i=0; i < k; i++){
-    printf("%d\t", i);
-    for(j=0; j < k; j++) printf("%5.3f\t", x[i*k + j]);
+  
+  for( i = 0; i < n; i++) {
+    for( j = 0; j < m; j++) {
+      printf("%5.3f, ", x[m*i + j]);
+    }
     printf("\n");
   }
-
   return;
 }
 
@@ -107,9 +35,113 @@ void printCovarMatrix ( double * x, int k ) {
 
 
 /* copy covar matrix function */
-void copyCovarMatrix ( double * x, double * y, int k ) {
-  int i;
-  for(i=0; i < k*k; i++) x[i] = y[i];
+void printCovarMatrix ( double * x,  int n ) {
+  int i, j, m;
+  m = 0;
+  for( i = 0; i < n; i++) {
+    for( j = 0; j < n; j++) {
+      if( j < i) {
+        printf("            ");
+      } else {
+        printf("%10.6f, ", x[m]);
+        m++;
+      }
+    }
+    printf("\n");
+  }
+  return;
+}
+
+
+
+
+/* perform sweep */
+void VSWP(
+  double * v,
+  int i,
+  int n 
+) {
+  
+  int j,k,l,m,N;
+  double * x = NULL;
+  double * y = NULL;
+  double * z = NULL;
+  double xii;
+  int * row;
+ 
+  N = n*(n+1)/2;
+
+  if( i == 0 ) { 
+    xii = v[0];
+  } else {
+    xii = v[i*n - (i*(i-1))/2];
+  }
+  
+  if( xii < 10e-20 ) {
+    printf("SWP: singular matrix.\n");
+    return;
+  }
+
+  // allocate if needed
+  if( x == NULL) {
+    x = calloc( sizeof(double *), N );
+    y = calloc( sizeof(double *), N );
+    z = calloc( sizeof(double *), n);
+    row = calloc(sizeof( int * ), n);
+
+    // reduce row calculations
+    row[0] = 0;
+    for( j = 1; j < n; j++) row[j] += row[j-1] + n - j + 1;
+  }
+
+  xii = 1/xii;
+ 
+  /* create easy to access index */ 
+  for(j=0; j<i; j++) {
+    z[j] = v[row[j] - j +i]; 
+  }
+  for(   ; j<n; j++) {
+    z[j] = v[row[i] - i + j]; 
+  }
+
+  /* fill the rest of the buffer */ 
+  m = 0;
+  for( j = 0; j < n; j++ ) {
+    for( k = j; k < n; k++ ) {
+    x[m] = z[k] * xii; 
+    m++; 
+    }
+  }
+  
+  /* create a second buffer and multiply by xii */
+  m = 0;
+  for( j = 0; j < n; j++ ) {
+    for( k = j; k < n; k++ ) {
+    y[m] = z[j]; 
+    m++; 
+    }
+  }
+
+  /* perform my math */
+  for(j=0; j<N; j++)  {
+    v[j] = v[j] - y[j] * x[j];
+  };
+
+  /* for the case of i == j replace x[j]*xii by xii */
+  for(j=0; j<i; j++) {
+    v[row[j] - j + i] = x[j];
+  }
+  for(   ; j<n; j++) {
+    v[row[i] -i + j] = x[j];
+  }
+  v[ row[i] ] = -1 * xii;
+    
+  // free needed 
+  free(z); 
+  free(x);
+  free(y);
+  free(row);
+  
   return;
 }
 
@@ -117,18 +149,37 @@ void copyCovarMatrix ( double * x, double * y, int k ) {
 
 
 /* save Parameters */
-void saveParameterEstimates( V, k, i, estimates ) {
-  for(int j = 0; j <= i; j++) estimates[k*i + j] = V[k*i + j]; // copy the row
+void saveParameterEstimates( double * V, int k, int i, double * estimates ) {
+  int j;
+    
+  int * row = calloc(sizeof( int * ), k);
+
+  // reduce row calculations
+  row[0] = 0;
+  for( j = 1; j < k; j++) row[j] += row[j-1] + k - j + 1;
+
+  
+  // horizontal across
+  
+  for(j=0; j<i; j++) {
+    estimates[(k+1)*i + j] = V[row[j] - j +i]; 
+  }
+  
+  // save sigma
+  estimates[(k+1)*i +k] = V[row[i]]; 
+
+  //vertical down
+  for(j=i+1; j<k; j++) {
+    estimates[(k+1)*i + j] = V[row[i] - i + j]; 
+  }
+
+  free(row);
+
   return;
 }
 
 
 
-
-//// need to take care of cache now
-// need to create a function to get an index from cache index
-// possibly create a function that creates the base tree, and create
-// a separate function to add to the tree
 
 /* function to print a covarTree */
 void sweepTree( 
@@ -136,40 +187,45 @@ void sweepTree(
     double * V, 
     int k, 
     double ** matrixCache, 
-    double * sigma, 
-    double * beta
+    double * estimates 
   ) {
+
+  int i;
 
   if( x == NULL ) return; 
  
   // this is where we write it out 
   if( x->varList != NULL) {
-    for( i = 1; i < x->varListLength; i++) saveParameterEstimates(V, k, x->varList[i], estimates);
+    for( i = 0; i < x->varListLength; i++) {
+      printf("Variable = %d\n", x->varList[i] );
+      saveParameterEstimates(V, k, x->varList[i], estimates);
+    }
     return;
   }
 
   // to add, if both are not null, then cache
   if( (x->yes != NULL) & (x->no != NULL) ) {
-    matrixCache[x->cacheIndex] = calloc( sizeof(double), k*k);
+    matrixCache[x->cacheIndex] = calloc( sizeof(double), (k*(k+1))/2 );
     copyCovarMatrix(matrixCache[x->cacheIndex],V,k);
+    //printCovarMatrix(matrixCache[x->cacheIndex],k);
   }
 
   if( x->yes != NULL) {
-    V=ASWP(V,&(x->index),1,k);
+    VSWP(V,x->index,k);
     //printCovarMatrix(V,k);
-    sweepTree(x->yes,V,k, matrixCache);
+    sweepTree(x->yes,V,k,matrixCache,estimates);
   }
   if( x->no != NULL) {
     // get matrixCache if x->yes is not null
     if( x->yes != NULL) copyCovarMatrix(V,matrixCache[x->cacheIndex],k);
 
     // sweep in matrixCache 
-    sweepTree(x->no,V,k,matrixCache);
+    sweepTree(x->no,V,k,matrixCache,estimates);
 
     // free the matrixCache 
     if( matrixCache[x->cacheIndex] != NULL ) {
       free( matrixCache[x->cacheIndex] );
-      matrixCache[x->cacheIndex] == NULL;
+      matrixCache[x->cacheIndex] = NULL;
     }
   }
 
@@ -192,43 +248,52 @@ int main( void ) {
   int i;
   int cacheSize;
   double ** cache;
+  double * est;
+  int n = 5;
 
   // symmetric matrix
   double x[] = {  
     10.31288,  2.448485, -2.412443, -1.393328, -6.486046, 
-    2.448485,  7.749054, -2.442433, 0.5318202,  1.395485,
-   -2.412443, -2.442433,  11.15893,  1.965747,  6.863963,
-   -1.393328, 0.5318202,  1.965747,  10.67714,  1.181446,
-   -6.486046,  1.395485,  6.863963,  1.181446,  12.50144 };
+               7.749054, -2.442433, 0.5318202,  1.395485,
+                          11.15893,  1.965747,  6.863963,
+                                     10.67714,  1.181446,
+                                                12.50144 
+  };
 
-  //printCovarMatrix(x,5);
+  
+  printf("\n Matrix = %p \n", (void *) x);
+  printCovarMatrix(x,n);
   cacheSize = 0;
 
 
-  for( i=0; i < 5; i++) covarList[i] = i % 2 == 0 ? true : false; 
+  for( i=0; i < 3; i++) covarList[i] = i % 2 == 0 ? true : false; 
+  covarList[3] = false;
+  covarList[4] = false;
   for( i=0; i < 5; i++) printf("covarList[%d] = %d\n", i , (int) covarList[i]);
 
-  myTree = createCovarTree( NULL, covarList, 5, 2, 0, &cacheSize); 
+  myTree = createCovarTree( NULL, covarList, n, 3, 0, &cacheSize); 
 
 
-  for( i=0; i < 5; i++) covarList[i] = true; 
+  for( i=0; i < 4; i++) covarList[i] = true; 
+  covarList[4] = false;
   for( i=0; i < 5; i++) printf("covarList[%d] = %d\n", i , (int) covarList[i]);
 
-  myTree = createCovarTree( myTree, covarList, 5, 3, 0,  &cacheSize); 
+  myTree = createCovarTree( myTree, covarList, n, 4, 0,  &cacheSize); 
 
 
   printf("Printing Tree\n");
   //printCovarTree(myTree);
-  
+
+  est = calloc( sizeof(double), n * (n+1) );
+
   printf("Cache Size = %d\n",cacheSize);
   cache = calloc( sizeof(double *) , cacheSize+1 );
-  sweepTree(myTree, x, 5, cache);
-  for( i=0; i <= cacheSize; i++) {
-    printf("%d: %p\n", i, (void *) cache[i] );
-    if( cache[i] != NULL ) free( cache[i] );
-  }
+  sweepTree(myTree, x, 5, cache, est);
   free(cache);
 
+
+  printFullMatrix( est, n, n+1);
+  free(est);
 
   printf("Deleteing Tree\n");
   deleteCovarTree(myTree);

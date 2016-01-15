@@ -33,10 +33,12 @@ void saveParameterEstimates( double * V, int k, int i, double * estimates );
 #ifndef CLI
 void RSweepTree( 
   double * x,          // upper (lower in R) triangular matrix including diag
-  bool *   covarIndex, // p by p matrix of model parameter inclusions 
+  int *   M,          // m by p matrix of model parameter inclusions 
+  int  * regIndex,   // variables (row indexes) that will be regressed
   double * est,        // p by p matrix of parameter estimates
-  int  *   pPtr        // number of rows/cols in x
-);
+  int  *   pPtr,       // number of rows/cols in x
+  int  *   mPtr        // number of rows in M 
+) ;
 #endif
 
 

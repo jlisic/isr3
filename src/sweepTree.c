@@ -167,9 +167,11 @@ void saveParameterEstimates( double * V, int k, int i, double * estimates ) {
   estimates[(k+1)*i +k] = V[row[i]]; 
 
   //vertical down
+  /*
   for(j=i+1; j<k; j++) {
     estimates[(k+1)*i + j] = V[row[i] - i + j]; 
   }
+  */
 
   free(row);
 
@@ -237,24 +239,58 @@ void sweepTree(
 #ifndef CLI
 void RSweepTree( 
   double * x,          // upper (lower in R) triangular matrix including diag
-  bool *   covarIndex, // p by p matrix of model parameter inclusions 
+  int *   M,          // m by p matrix of model parameter inclusions 
+  int  * regIndex,   // variables (row indexes) that will be regressed
   double * est,        // p by p matrix of parameter estimates
-  int  *   pPtr        // number of rows/cols in x
+  int  *   pPtr,       // number of rows/cols in x
+  int  *   mPtr        // number of rows in M 
 ) {
 
 
   covarTreePtr myTree = NULL;
-  int i;
+  int i,j;
   int cacheSize;
   double ** cache;
+  bool * MBool;        //array to convert int from R to boolean
 
   int p = * pPtr;
+  int m = * mPtr;
   cacheSize = 0;
 
+//debug
+printCovarMatrix(x,p);
+
+  // fix an annoying R interface issue, e.g. .C does not support logical to boolean
+
+
   // create tree for regression
-  myTree = createCovarTree( NULL, covarIndex, p, i, 0, &cacheSize); 
-  for(i=1;i<p;i++) myTree = 
-    createCovarTree(myTree, covarIndex + i*p, p, i, 0, &cacheSize); 
+ 
+//debug 
+
+  MBool = calloc( sizeof( bool *), p);
+
+  printf("M:\n");
+  for(j=0;j<p*m;j++) printf("%d", M[j] );
+  printf("\n");
+  
+  for(j=0;j<p;j++) MBool[j] = (bool) M[j];
+
+  printf("M:\n");
+  for(j=0;j<p;j++) printf("%d", (int) MBool[j] );
+  printf("\n");
+
+  printf("regIndex[0] = %d : ", regIndex[0]);  for(j=0;j<p;j++) printf("%s, ", MBool[j] ? "True" : "False" ); printf("\n");
+
+  myTree = createCovarTree( NULL, MBool, p, regIndex[0], 0, &cacheSize); 
+  for(i=1;i<m;i++) {
+    for(j=0;j<p;j++) MBool[j] = (bool) M[i*p + j];
+    
+    printf("regIndex[%d] = %d : ", i, regIndex[i]);  for(j=0;j<p;j++) printf("%s, ", MBool[j] ? "True" : "False" ); printf("\n");
+   
+    myTree = createCovarTree(myTree, MBool, p, regIndex[i], 0, &cacheSize); 
+  }
+  printf("Printing Tree\n");
+  printCovarTree(myTree);
 
   // allocate space for the cache
   printf("Cache Size = %d\n",cacheSize);
@@ -263,6 +299,10 @@ void RSweepTree(
   // estimate parameters for model through tree
   sweepTree(myTree, x, p, cache, est);
 
+//debug  
+printFullMatrix( est, p, p+1);
+
+  free(MBool);
   free(cache);
   deleteCovarTree(myTree);
 

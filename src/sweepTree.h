@@ -30,6 +30,14 @@ void sweepTree( covarTreePtr x, double * V, int k, double ** matrixCache, double
 /* save parameters */
 void saveParameterEstimates( double * V, int k, int i, double * estimates ); 
 
+#ifndef CLI
+void RSweepTree( 
+  double * x,          // upper (lower in R) triangular matrix including diag
+  bool *   covarIndex, // p by p matrix of model parameter inclusions 
+  double * est,        // p by p matrix of parameter estimates
+  int  *   pPtr        // number of rows/cols in x
+);
+#endif
 
 
 

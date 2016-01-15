@@ -16,7 +16,7 @@ covarTreePtr createCovarTree(
 
     // allocate and initialize 
     if( x == NULL ) {
-      printf("Allocating %d\n", covarListLength);
+      //printf("Allocating %d\n", covarListLength);
       x = malloc( sizeof( covarTree ) );
       x->index = covarIndex;        // covariate index 
       x->cacheIndex = ++(*cacheIndex);              // location in cache array 
@@ -39,7 +39,7 @@ covarTreePtr createCovarTree(
     
     // allocate and initialize 
     if( x == NULL ) {
-      printf("Allocating %d\n", covarListLength);
+      //printf("Allocating %d\n", covarListLength);
       x = malloc( sizeof( covarTree ) );
       x->index = -1;        // covariate index 
       x->cacheIndex = 0;              // location in cache array 
@@ -48,7 +48,7 @@ covarTreePtr createCovarTree(
       x->yes = NULL;                  // yes, the covariate index is swept
       x->no = NULL;                   // no, the covariate index is not swept
     }
-    printf("At the End %d\n", varIndex);
+    //printf("At the End %d\n", varIndex);
 
     // this is a bit messy, but works for low duplicate sets of covariates
     int * varListNew = malloc( sizeof(int) * (x->varListLength + 1) );      // create new array of size + 1
@@ -74,7 +74,7 @@ void deleteCovarTree( covarTreePtr x ) {
   deleteCovarTree(x->yes);
   deleteCovarTree(x->no);
 
-  printf("Deleting %d\n", x->index);
+  //printf("Deleting %d\n", x->index);
 
   if( x->varList != NULL) free(x->varList);
   free(x);

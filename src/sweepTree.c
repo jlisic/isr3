@@ -147,7 +147,13 @@ void VSWP(
 
 
 /* save Parameters */
-void saveParameterEstimates( double * V, int k, int i, double * estimates ) {
+void saveParameterEstimates( 
+    double * V, 
+    int k, 
+    int i, 
+    int * index, 
+    double * estimates 
+    ) {
   int j;
     
   int * row = calloc(sizeof( int * ), k);
@@ -155,23 +161,12 @@ void saveParameterEstimates( double * V, int k, int i, double * estimates ) {
   // reduce row calculations
   row[0] = 0;
   for( j = 1; j < k; j++) row[j] += row[j-1] + k - j + 1;
-
   
   // horizontal across
-  
-  for(j=0; j<i; j++) {
-    estimates[(k+1)*i + j] = V[row[j] - j +i]; 
-  }
+  for(j=0; j<i; j++) estimates[(k+1)*index[i] + j] = V[row[j] - j +i]; 
   
   // save sigma
-  estimates[(k+1)*i +k] = V[row[i]]; 
-
-  //vertical down
-  /*
-  for(j=i+1; j<k; j++) {
-    estimates[(k+1)*i + j] = V[row[i] - i + j]; 
-  }
-  */
+  estimates[(k+1)*index[i] +k] = V[row[i]]; 
 
   free(row);
 
@@ -187,6 +182,7 @@ void sweepTree(
     double * V, 
     int k, 
     double ** matrixCache, 
+    int * index,
     double * estimates 
   ) {
 
@@ -198,7 +194,7 @@ void sweepTree(
   if( x->varList != NULL) {
     for( i = 0; i < x->varListLength; i++) {
       //printf("Variable = %d\n", x->varList[i] );
-      saveParameterEstimates(V, k, x->varList[i], estimates);
+      saveParameterEstimates(V, k, x->varList[i], index, estimates);
     }
     return;
   }
@@ -213,14 +209,14 @@ void sweepTree(
   if( x->yes != NULL) {
     VSWP(V,x->index,k);
     //printCovarMatrix(V,k);
-    sweepTree(x->yes,V,k,matrixCache,estimates);
+    sweepTree(x->yes,V,k,matrixCache,index,estimates);
   }
   if( x->no != NULL) {
     // get matrixCache if x->yes is not null
     if( x->yes != NULL) copyCovarMatrix(V,matrixCache[x->cacheIndex],k);
 
     // sweep in matrixCache 
-    sweepTree(x->no,V,k,matrixCache,estimates);
+    sweepTree(x->no,V,k,matrixCache,index,estimates);
 
     // free the matrixCache 
     if( matrixCache[x->cacheIndex] != NULL ) {
@@ -236,12 +232,12 @@ void sweepTree(
 
 
 /* R interface */
-#ifndef CLI
 void RSweepTree( 
   double * x,          // upper (lower in R) triangular matrix including diag
   int *   M,          // m by p matrix of model parameter inclusions 
   int  * regIndex,   // variables (row indexes) that will be regressed
   double * est,        // p by p matrix of parameter estimates
+  int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
   int  *   pPtr,       // number of rows/cols in x
   int  *   mPtr        // number of rows in M 
 ) {
@@ -258,49 +254,25 @@ void RSweepTree(
   cacheSize = 0;
 
 //debug
-printCovarMatrix(x,p);
+//printCovarMatrix(x,p);
 
   // fix an annoying R interface issue, e.g. .C does not support logical to boolean
-
-
-  // create tree for regression
- 
-//debug 
-
   MBool = calloc( sizeof( bool *), p);
-
-  printf("M:\n");
-  for(j=0;j<p*m;j++) printf("%d", M[j] );
-  printf("\n");
-  
   for(j=0;j<p;j++) MBool[j] = (bool) M[j];
 
-  printf("M:\n");
-  for(j=0;j<p;j++) printf("%d", (int) MBool[j] );
-  printf("\n");
-
-  printf("regIndex[0] = %d : ", regIndex[0]);  for(j=0;j<p;j++) printf("%s, ", MBool[j] ? "True" : "False" ); printf("\n");
-
+  // create tree
   myTree = createCovarTree( NULL, MBool, p, regIndex[0], 0, &cacheSize); 
   for(i=1;i<m;i++) {
     for(j=0;j<p;j++) MBool[j] = (bool) M[i*p + j];
     
-    printf("regIndex[%d] = %d : ", i, regIndex[i]);  for(j=0;j<p;j++) printf("%s, ", MBool[j] ? "True" : "False" ); printf("\n");
-   
     myTree = createCovarTree(myTree, MBool, p, regIndex[i], 0, &cacheSize); 
   }
-  printf("Printing Tree\n");
-  printCovarTree(myTree);
 
   // allocate space for the cache
-  printf("Cache Size = %d\n",cacheSize);
   cache = calloc( sizeof(double *) , cacheSize+1 );
 
   // estimate parameters for model through tree
-  sweepTree(myTree, x, p, cache, est);
-
-//debug  
-printFullMatrix( est, p, p+1);
+  sweepTree(myTree, x, p, cache, index, est);
 
   free(MBool);
   free(cache);
@@ -308,13 +280,12 @@ printFullMatrix( est, p, p+1);
 
   return;
 }
-#endif
 
 
 
 
 /* test function */
-#ifdef CLI
+#ifdef TEST_SWEEPTREE 
 int main( void ) {
 
   covarTreePtr myTree = NULL;
@@ -334,7 +305,9 @@ int main( void ) {
                                                 12.50144 
   };
 
-  
+  //             0  1  2 [3  4]
+  int index[] = {0, 0, 0, 0, 1};  
+  int m = 2;
   //printf("\n Matrix = %p \n", (void *) x);
   //printCovarMatrix(x,n);
   cacheSize = 0;
@@ -345,7 +318,7 @@ int main( void ) {
   covarList[4] = false;
   //for( i=0; i < 5; i++) printf("covarList[%d] = %d\n", i , (int) covarList[i]);
 
-  myTree = createCovarTree( NULL, covarList, n, 3, 0, &cacheSize); 
+  myTree = createCovarTree( NULL, covarList, n, 3,  0, &cacheSize); 
 
 
   for( i=0; i < 4; i++) covarList[i] = true; 
@@ -353,20 +326,20 @@ int main( void ) {
 
   //for( i=0; i < 5; i++) printf("covarList[%d] = %d\n", i , (int) covarList[i]);
 
-  myTree = createCovarTree( myTree, covarList, n, 4, 0,  &cacheSize); 
+  myTree = createCovarTree( myTree, covarList, n, 4 , 0,  &cacheSize); 
 
 
   //printf("Printing Tree\n");
   //printCovarTree(myTree);
 
-  est = calloc( sizeof(double), n * (n+1) );
+  est = calloc( sizeof(double), m * (n+1) );
 
   //printf("Cache Size = %d\n",cacheSize);
   cache = calloc( sizeof(double *) , cacheSize+1 );
-  sweepTree(myTree, x, 5, cache, est);
+  sweepTree(myTree, x, 5, cache, index, est);
 
 
-  //printFullMatrix( est, n, n+1);
+  //printFullMatrix( est, m, n+1);
   free(cache);
   free(est);
 

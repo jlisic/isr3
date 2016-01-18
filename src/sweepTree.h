@@ -25,23 +25,28 @@ void printCovarMatrix ( double * x, int k );
 void copyCovarMatrix ( double * x, double * y, int k ); 
 
 /* sweepTree */
-void sweepTree( covarTreePtr x, double * V, int k, double ** matrixCache, double * estimates ); 
+void sweepTree( 
+    covarTreePtr x, 
+    double * V, 
+    int k, 
+    double ** matrixCache, 
+    int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
+    double * estimates 
+    ); 
 
 /* save parameters */
-void saveParameterEstimates( double * V, int k, int i, double * estimates ); 
+void saveParameterEstimates( double * V, int k, int i, int * index, double * estimates ); 
 
-#ifndef CLI
+/* R interface */
 void RSweepTree( 
   double * x,          // upper (lower in R) triangular matrix including diag
   int *   M,          // m by p matrix of model parameter inclusions 
   int  * regIndex,   // variables (row indexes) that will be regressed
   double * est,        // p by p matrix of parameter estimates
+  int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
   int  *   pPtr,       // number of rows/cols in x
   int  *   mPtr        // number of rows in M 
-) ;
-#endif
-
-
+); 
 
 #endif
 

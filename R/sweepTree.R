@@ -24,32 +24,30 @@ sweepTree <- function( V, M ) {
   # get rownames from M 
   regVars <- rownames(M)
   if(is.null(regVars)) stop(sprintf('Row names required for V and M'))
-  cat(sprintf("Performing Regression on:\n%s\n", paste(regVars,collapse=',')))
+  #cat(sprintf("Performing Regression on:\n%s\n", paste(regVars,collapse=',')))
 
   # get positions in M of rownames
   regIndex <- as.integer(sapply(regVars, FUN=match, rownames(V) ))
   if(is.na(sum(regIndex))) stop(sprintf('Row names differ between V and M'))
 
-  print(regIndex -1)
-
-  #if( colnames(V) != colnames(M) || rownames(V) != rownames(M) ) stop(sprintf('colnames do not match'))
- 
-  print(as.integer(M))
+  # create a reverse mapping
+  mapIndex <- rep(0,p[1])
+  mapIndex[regIndex] <- 1:length(regIndex) 
 
   r.result <- .C("RSweepTree",
     as.double(V[lower.tri(V,T)]), 
     as.integer(c(t(M))),
     as.integer(regIndex -1),
-    as.double(rep(0,p[1]*(p[1]+1))), 
+    as.double(rep(0,m[1]*(p[1]+1))),
+    as.integer(mapIndex-1), 
     as.integer(p[1]),
     as.integer(m[1])
   )
-         
-  E <- matrix( r.result[[4]] ,nrow=p[1],byrow=T) 
-  E <- E[regIndex,]
+
+  debugResult <<- r.result[[4]]  
+  E <- matrix( r.result[[4]] ,ncol=p[1]+1,byrow=T) 
+  #E <- E[regIndex,]
   E <- E * cbind(M,1)
-  #colnames(E) <- colnames(M)
-  #rownames(E) <- rownames(M)
 
   return(E) 
 }

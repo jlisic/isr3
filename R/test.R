@@ -1,8 +1,11 @@
 source('sweepTree.R')
 
 ######################################################################
-# The basic idea here is to take a set of variables and covariates
-# Example One
+# The basic idea here is to take a set of variables and covariates,
+# then perform regression on all of them in a computationally  
+# efficient manner.
+######################################################################
+# Test One : Accuracy compared to lm 
 ######################################################################
 
 # this is a list of all dependent and independent variables
@@ -42,15 +45,20 @@ S <- t(S)
 S[upper.tri(S,T)] <- covarMatrix
 
 # cholesky
-#U <- chol(S)
+U <- chol(S)
 
-#X <- matrix(rnorm(n*p), nrow=n) %*% U
+X <- matrix(rnorm(n*p), nrow=n) %*% U
+colnames(X) <- covarList
 
-#XX <- t(X) %*% X
-XX <- S
+###############################################
+################ start here ###################
+###############################################
 
-colnames(XX) <- covarList 
-rownames(XX) <- covarList 
+XX <- t(X) %*% X
+
+#XX <- S
+#colnames(XX) <- covarList 
+#rownames(XX) <- covarList 
 
 
 fitMatrix <- matrix( c( 
@@ -69,8 +77,39 @@ rownames(fitMatrix) <- varList
 
 
 # create tree
-#myTree <- 
+sweep.time <- proc.time()
 E<-  sweepTree(XX,fitMatrix)
+print(proc.time() - sweep.time)
+
+
+
+###############################################
+################ start here ###################
+###############################################
+## prep
+X.df <- as.data.frame(X)
+
+
+E2 <- E
+
+fit.time <- proc.time()
+for( i in 1:nrow(fitMatrix) ) {
+
+  a <- sprintf("%s ~ -1  + %s",
+  rownames(fitMatrix)[i],
+  paste( colnames(fitMatrix)[fitMatrix[i,]], collapse=" + ") 
+  )
+
+  fit <- lm( as.formula(a) , data=X.df)
+
+  E2[ rownames(fitMatrix)[i], names(fit$coefficients) ] <- fit$coefficients
+  E2[ rownames(fitMatrix)[i], ncol(E) ] <- sum(fit$residuals^2) 
+
+}
+print(proc.time() - fit.time)
+
+
+print(max(abs(E - E2)))
 
 
 

@@ -12,21 +12,20 @@ rebuildCovar <- function( E ) {
 
   # check M properties
   if( !is.matrix(E) )    stop(sprintf('E is not a matrix'))
-  m <- nrow(E)
-  n <- ncol(E) - 1
+  E <- cbind(E[,rownames(E)],E[,ncol(E)])
+  n <- nrow(E) 
+
 
   r.result <- .C("RRebuildCovar",
-    as.double(rep(0,m*(m+1)/2)), 
+    as.double(rep(0,n*(n+1)/2)), 
     as.double(c(t(E))),
-    as.integer(0:(m-1)),
-    as.integer(n),
-    as.integer(m)
+    as.integer(n)
   )
 
-  E <- r.result[[1]]  
-  #E <- matrix( r.result[[1]] ,ncol=p[1]+1,byrow=T) 
-  #E <- E[regIndex,]
-  #E <- E * cbind(M,1)
+  E <- E[,-1]
+  E[lower.tri(E,T)] <- r.result[[1]]  
+  E <- t(E)
+  E[lower.tri(E,T)] <- r.result[[1]]  
 
   return(E) 
 }

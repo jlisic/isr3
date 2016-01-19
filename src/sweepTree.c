@@ -39,9 +39,10 @@ void printCovarMatrix ( double * x,  int n ) {
   for( i = 0; i < n; i++) {
     for( j = 0; j < n; j++) {
       if( j < i) {
-        printf("            ");
+        //printf("            ");
+        printf("\t ");
       } else {
-        printf("%10.6f, ", x[m]);
+        printf("%5.4f,", x[m]);
         m++;
       }
     }

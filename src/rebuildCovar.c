@@ -55,11 +55,11 @@ void rebuildCovar( double * x, double * y, int * index, int p, int m) {
       // multiply beta times the covar matrix to update covar matrix for row i
       //printf("*** %d ***\n",i);
       for(k=0; k<j; k++) {
-        //printf("%d: %5.4f * %5.4f\n",k, y[row[k]-k+j], beta[index[k]]);
+        printf("%d: %5.4f * %5.4f\n",k, y[row[k]-k+j], beta[index[k]]);
         tmp += y[row[k]-k+j] * beta[index[k]];
       }
       for(   ; k<i; k++) {
-        //printf("%d: %5.4f * %5.4f\n",k, y[row[j]-j+k], beta[index[k]]);
+        printf("%d: %5.4f * %5.4f\n",k, y[row[j]-j+k], beta[index[k]]);
         tmp += y[row[j]-j+k] * beta[index[k]]; 
       }
       
@@ -68,7 +68,7 @@ void rebuildCovar( double * x, double * y, int * index, int p, int m) {
       y[ row[j]+i ] = tmp;
       
       // update marginal variance 
-      //printf("%d %d tmp = %f\n",i, row[i] +i, tmp);
+      printf("%d %d tmp = %f + %f \n",i, row[i] +i, tmp, beta[index[j]] );
       y[ row[i]+i ] += tmp * beta[index[j]];
     }
 

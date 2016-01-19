@@ -1,5 +1,6 @@
 source('sweepTree.R')
 source('rebuildCovar.R')
+source('getCovs.R')
 
 ######################################################################
 # The basic idea here is to take a set of variables and covariates,
@@ -111,6 +112,27 @@ print(proc.time() - fit.time)
 
 
 print(max(abs(E - E2)))
+
+
+###############################################
+################  ###################
+###############################################
+
+betas <- E[,rownames(E)]
+sigmas <- E[,ncol(E)]
+
+#betas <- betas[1:2,1:2]
+#sigmas <- sigmas[1:2]
+
+CISR3 <- rebuildCovar( cbind(betas,sigmas))
+CISR <- getCovs(betas,sigmas) 
+
+
+
+
+
+
+
 
 
 

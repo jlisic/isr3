@@ -18,7 +18,7 @@
  *
  * y: is an m by m covariance matrix in triangular + diag form  
  */
-void rebuildTree( double * x, double * y, int * index, int p, int m) {
+void rebuildCovar( double * x, double * y, int * index, int p, int m) {
 
   int i,j,k;
   double tmp;
@@ -80,6 +80,30 @@ void rebuildTree( double * x, double * y, int * index, int p, int m) {
 }
 
 
+
+/* R interface */
+void RRebuildCovar( 
+  double * x,          // upper (lower in R) triangular matrix including diag
+  double * est,        // m by p matrix of parameter estimates
+  int *    regIndex,   // variables (row indexes) that will be regressed
+  int  *   nPtr,       // number of rows/cols in x
+  int  *   mPtr        // number of rows in M 
+) {
+
+  int n = * nPtr;
+  int m = * mPtr;
+
+//debug
+  printFullMatrix( est, m, n+1);
+
+  rebuildCovar( est, x, regIndex, n, m);
+
+//debug 
+  printf("Rebuilt\n");
+  printCovarMatrix(x,m);
+
+  return;
+}
 
 
 
@@ -154,7 +178,7 @@ int main( void ) {
   //printFullMatrix( est, m, n+1);
 
   y = calloc( m*(m+1)/2, sizeof(double) );
-  rebuildTree( est, y, vars, n, m);
+  rebuildCovar( est, y, vars, n, m);
 
   //printf("Rebuilt\n");
   //printCovarMatrix(y,m);

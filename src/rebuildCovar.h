@@ -24,7 +24,7 @@
  *
  * y: is an m by m covariance matrix in triangular + diag form  
  */
-void rebuildTree( 
+void rebuildCovar( 
   double * x, 
   double * y, 
   int * index, 
@@ -34,13 +34,11 @@ void rebuildTree(
 
 
 /* R interface */
-void RRebuildTree( 
+void RRebuildCovar( 
   double * x,          // upper (lower in R) triangular matrix including diag
-  int *   M,          // m by p matrix of model parameter inclusions 
-  int  * regIndex,   // variables (row indexes) that will be regressed
-  double * est,        // p by p matrix of parameter estimates
-  int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
-  int  *   pPtr,       // number of rows/cols in x
+  double * est,        // m by p matrix of parameter estimates
+  int *    regIndex,   // variables (row indexes) that will be regressed
+  int  *   nPtr,       // number of rows/cols in x
   int  *   mPtr        // number of rows in M 
 ); 
 

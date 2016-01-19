@@ -1,4 +1,5 @@
 source('sweepTree.R')
+source('rebuildCovar.R')
 
 ######################################################################
 # The basic idea here is to take a set of variables and covariates,
@@ -110,6 +111,7 @@ print(proc.time() - fit.time)
 
 
 print(max(abs(E - E2)))
+
 
 
 

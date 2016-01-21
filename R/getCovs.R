@@ -25,7 +25,7 @@ function (betas,sigmas,p=length(sigmas)) {
       covars[1,2] = covars[2,1]
       covars[2,2] = sigmas[2] + betas[2,1] *  sigmas[1]  * betas[2,1] 
       
-      print(covars)
+      #print(covars)
     
     # This is the general case for j > 2 
     } else if(j > 2) {
@@ -37,9 +37,9 @@ function (betas,sigmas,p=length(sigmas)) {
     #   coefs = [ b31 b32 ] 
       coefs=matrix( betas[j,j.range] ,nrow=1,ncol=j-1)
 
-      print(coefs)
-      print(covars[j.range,j.range])
-      print(coefs %*% covars[j.range,j.range])
+      #print(coefs)
+      #print(covars[j.range,j.range])
+      #print(coefs %*% covars[j.range,j.range])
        
     # example:
     #   covars[j,j.range] = [ b31 b32 ] [ sigma1 b21                          ]

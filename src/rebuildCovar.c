@@ -18,7 +18,7 @@
  *
  * y: is an m by m covariance matrix in triangular + diag form  
  */
-void rebuildCovar( double * x, double * y, int * index, int p, int m) {
+void rebuildCovar( double * x, double * y, int p) {
 
   int i,j,k;
   double tmp;
@@ -35,17 +35,60 @@ void rebuildCovar( double * x, double * y, int * index, int p, int m) {
    *  4  9 13 16 18
    *  5 10 14 17 19 20
   */
-  row[0] = 0; 
-  for( i = 1; i < m; i++) row[i] = (m-i) + row[i-1]; 
+    
+  row[0] = 0;
+  for( i = 1; i < p; i++) row[i] += row[i-1] + p - i + 1;
 
   // m < p
-  for(i = 0; i < m; i++) {
+  for(i = 0; i < p; i++) {
+    //printf("y:i= %d\n",i );  
+    //printCovarMatrix(y,p);
 
     // beta vector
     beta = &(x[i*(p+1)]);
    
     // update variance   
-    y[ row[i]+i ] = beta[p];
+    y[ row[i] ] = beta[p];
+
+
+    /* example p = 3
+     *
+     * [0 .]
+     * [1 3] 
+     *  2 4 5
+     *
+     * [0 .] beta[1]
+     * [1 3] beta[2] 
+     *
+     *
+     */
+    
+    /* example p = 4 
+     *
+     *  0 . . .
+     *  1 4 . . 
+     *  2 5 7 .
+     *  3 6 8 9
+     *
+     * [0 1 2] beta[1]
+     * [. 4 5] beta[2] 
+     * [. . 7] beta[3]
+     *
+     * for i = 3, j = 0 , iterate by k for each element
+     * [0 1 2] beta[1]
+     *         beta[2] 
+     *         beta[3]
+     *
+     * for i = 3, j = 1 , iterate by k for each element
+     *         beta[1]
+     * [1 4 5] beta[2] 
+     *         beta[3]
+     *
+     * for i = 3, j = 2 , iterate by k for each element
+     *         beta[1]
+     *         beta[2] 
+     * [2 5 7] beta[3]
+     */
 
     // iterate over row of y
     for(j=0;j<i;j++) {
@@ -53,23 +96,25 @@ void rebuildCovar( double * x, double * y, int * index, int p, int m) {
 
       
       // multiply beta times the covar matrix to update covar matrix for row i
-      //printf("*** %d ***\n",i);
+      // unalligned memory multiply 
+      //printf("*** i=%d j= %d***\n",i,j);
       for(k=0; k<j; k++) {
-        printf("%d: %5.4f * %5.4f\n",k, y[row[k]-k+j], beta[index[k]]);
-        tmp += y[row[k]-k+j] * beta[index[k]];
+        //printf("%d: (%d) %5.4f * %5.4f (unalligned)\n",k, row[k]-k+j, y[row[k]-k+j], beta[k]);
+        tmp += y[row[k]-k+j] * beta[k];
       }
+      // alligned memory multiply 
       for(   ; k<i; k++) {
-        printf("%d: %5.4f * %5.4f\n",k, y[row[j]-j+k], beta[index[k]]);
-        tmp += y[row[j]-j+k] * beta[index[k]]; 
+        //printf("%d: (%d) %5.4f * %5.4f (alligned)\n",k, row[j]-j+k, y[row[j]-j+k], beta[k]);
+        tmp += y[row[j]-j+k] * beta[k]; 
       }
       
       //printf("%d %d tmp = %f\n",i, row[j] +i, tmp);
       // update covariance 
-      y[ row[j]+i ] = tmp;
+      y[ row[j] -j +i ] = tmp;
       
       // update marginal variance 
-      printf("%d %d tmp = %f + %f \n",i, row[i] +i, tmp, beta[index[j]] );
-      y[ row[i]+i ] += tmp * beta[index[j]];
+      //printf("%d %d tmp = %f + %f * %f \n",i, row[i] +i, y[row[i]], tmp, beta[j] );
+      y[ row[i] ] += tmp * beta[j];
     }
 
   }
@@ -81,32 +126,27 @@ void rebuildCovar( double * x, double * y, int * index, int p, int m) {
 
 
 
+
 /* R interface */
 void RRebuildCovar( 
   double * x,          // upper (lower in R) triangular matrix including diag
-  double * est,        // m by p matrix of parameter estimates
-  int *    regIndex,   // variables (row indexes) that will be regressed
-  int  *   nPtr,       // number of rows/cols in x
-  int  *   mPtr        // number of rows in M 
+  double * est,        // p by p matrix of parameter estimates
+  int  *   nPtr        // number of rows/cols in x
 ) {
 
   int n = * nPtr;
-  int m = * mPtr;
 
 //debug
-  printFullMatrix( est, m, n+1);
+//printFullMatrix( est, n, n+1);
 
-  rebuildCovar( est, x, regIndex, n, m);
+  rebuildCovar( est, x, n);
 
 //debug 
-  printf("Rebuilt\n");
-  printCovarMatrix(x,m);
+//printf("Rebuilt\n");
+//printCovarMatrix(x,n);
 
   return;
 }
-
-
-
 
 
 

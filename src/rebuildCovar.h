@@ -27,19 +27,15 @@
 void rebuildCovar( 
   double * x, 
   double * y, 
-  int * index, 
-  int p, 
-  int m
+  int p
 );
 
 
 /* R interface */
 void RRebuildCovar( 
   double * x,          // upper (lower in R) triangular matrix including diag
-  double * est,        // m by p matrix of parameter estimates
-  int *    regIndex,   // variables (row indexes) that will be regressed
-  int  *   nPtr,       // number of rows/cols in x
-  int  *   mPtr        // number of rows in M 
+  double * est,        // p by p matrix of parameter estimates
+  int  *   nPtr        // number of rows/cols in x
 ); 
 
 #endif

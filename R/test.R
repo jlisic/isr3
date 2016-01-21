@@ -124,12 +124,22 @@ sigmas <- E[,ncol(E)]
 #betas <- betas[1:2,1:2]
 #sigmas <- sigmas[1:2]
 
-CISR3 <- rebuildCovar( cbind(betas,sigmas))
+
+
+fit.time <- proc.time()
+CISR3 <- rebuildCovar( E )
+print(proc.time() - fit.time)
+
+fit.time <- proc.time()
 CISR <- getCovs(betas,sigmas) 
+print(proc.time() - fit.time)
 
 
-
-
+a <- c( -0.06745585, 0.09634714 ) 
+B <- matrix( c(
+                186432.64,  67964.87,
+                 67964.87, 196401.92
+                ), byrow=T,nrow=2)
 
 
 

@@ -177,6 +177,119 @@ void saveParameterEstimates(
 
 
 
+/* perform reverse sweep */
+void VRevSWP(
+  double * v,
+  int i,
+  int n 
+) {
+  
+  int j,k,m,N;
+  double * x = NULL;
+  double * y = NULL;
+  double * z = NULL;
+  double xii;
+  int * row;
+ 
+  N = n*(n+1)/2;
+
+  if( i == 0 ) { 
+    xii = v[0];
+  } else {
+    xii = v[i*n - (i*(i-1))/2];
+  }
+  
+  if( xii < 10e-20 ) {
+    printf("SWP: singular matrix.\n");
+    return;
+  }
+
+  // allocate if needed
+  if( x == NULL) {
+    x = calloc( sizeof(double *), N );
+    y = calloc( sizeof(double *), N );
+    z = calloc( sizeof(double *), n);
+    row = calloc(sizeof( int * ), n);
+
+    // reduce row calculations
+    row[0] = 0;
+    for( j = 1; j < n; j++) row[j] += row[j-1] + n - j + 1;
+  }
+
+  xii = 1/xii;
+ 
+  /* create easy to access index */ 
+  for(j=0; j<i; j++) {
+    z[j] = v[row[j] - j +i]; 
+  }
+  for(   ; j<n; j++) {
+    z[j] = v[row[i] - i + j]; 
+  }
+
+  /* fill the rest of the buffer */ 
+  m = 0;
+  for( j = 0; j < n; j++ ) {
+    for( k = j; k < n; k++ ) {
+    x[m] = z[k] * xii; 
+    m++; 
+    }
+  }
+  
+  /* create a second buffer and multiply by xii */
+  m = 0;
+  for( j = 0; j < n; j++ ) {
+    for( k = j; k < n; k++ ) {
+    y[m] = z[j]; 
+    m++; 
+    }
+  }
+
+  /* perform my math */
+  for(j=0; j<N; j++)  {
+    v[j] = y[j] * x[j];
+  };
+
+  /* for the case of i == j replace x[j]*xii by xii */
+  for(j=0; j<i; j++) {
+    v[row[j] - j + i] = -1 * x[j];
+  }
+  for(   ; j<n; j++) {
+    v[row[i] -i + j] = - 1 * x[j];
+  }
+  v[ row[i] ] = -1 * xii;
+    
+  // free needed 
+  free(z); 
+  free(x);
+  free(y);
+  free(row);
+  
+  return;
+}
+
+
+
+/* perform reverse sweep */
+void RVSWP(
+  double * v,
+  int * i,
+  int * n 
+) {
+  VSWP(v, *i, *n); 
+  return;
+}
+
+/* perform reverse sweep */
+void RVRevSWP(
+  double * v,
+  int * i,
+  int * n 
+) {
+  VRevSWP(v, *i, *n); 
+  return;
+}
+
+
 /* function to print a covarTree */
 void sweepTree( 
     covarTreePtr x, 

@@ -18,6 +18,27 @@ void VSWP(
   int n 
 );
 
+/* reverse sweep function */
+void VRevSWP(
+  double * v,
+  int i,
+  int n 
+); 
+
+/* R sweep function interface */
+void RVSWP(
+  double * v,
+  int * i,
+  int * n 
+);
+
+/* R reverse sweep function interface*/
+void RVRevSWP(
+  double * v,
+  int * i,
+  int * n 
+); 
+
 void printFullMatrix ( double * x, int n, int m );
 
 void printCovarMatrix ( double * x, int k );

@@ -16,9 +16,8 @@ void RprintMatrixDouble( double *x , int n, int m ) {
     Rprintf("\n");
     }
 
-
+  return;
 }
-
 
 
 /*
@@ -177,10 +176,10 @@ void RIStep(
 
   // (x - XB)(Sigma.inv_{ii} - Sigma.inv_{-1,-1} 
 
-  //SA = createArrayFromLower(S, p);
+  SA = copyMatrixFromLowerTriangularArray(S, p);
 
   //for(i=0;i<p;i++) {
-  //VRSWP( SA, i, p); 
+  //VRevSWP( SA, i, p); 
   //
   //
   // //store new missing in X

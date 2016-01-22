@@ -32,6 +32,10 @@ void printFullMatrix ( double * x, int n, int m ) {
 
 
 
+
+
+
+
 /* copy covar matrix function */
 void printCovarMatrix ( double * x,  int n ) {
   int i, j, m;
@@ -68,7 +72,7 @@ void VSWP(
   double xii;
   int * row;
  
-  N = n*(n+1)/2;
+  N = (n*(n+1))/2;
 
   if( i == 0 ) { 
     xii = v[0];
@@ -147,36 +151,6 @@ void VSWP(
 
 
 
-/* save Parameters */
-void saveParameterEstimates( 
-    double * V, 
-    int k, 
-    int i, 
-    int * index, 
-    double * estimates 
-    ) {
-  int j;
-    
-  int * row = calloc(sizeof( int * ), k);
-
-  // reduce row calculations
-  row[0] = 0;
-  for( j = 1; j < k; j++) row[j] += row[j-1] + k - j + 1;
-  
-  // horizontal across
-  for(j=0; j<i; j++) estimates[(k+1)*index[i] + j] = V[row[j] - j +i]; 
-  
-  // save sigma
-  estimates[(k+1)*index[i] +k] = V[row[i]]; 
-
-  free(row);
-
-  return;
-}
-
-
-
-
 /* perform reverse sweep */
 void VRevSWP(
   double * v,
@@ -191,7 +165,7 @@ void VRevSWP(
   double xii;
   int * row;
  
-  N = n*(n+1)/2;
+  N = (n*(n+1))/2;
 
   if( i == 0 ) { 
     xii = v[0];
@@ -269,7 +243,7 @@ void VRevSWP(
 
 
 
-/* perform reverse sweep */
+/* R interface to perform reverse sweep */
 void RVSWP(
   double * v,
   int * i,
@@ -282,7 +256,7 @@ void RVSWP(
 
 
 
-/* perform reverse sweep */
+/* R interface to perform reverse sweep */
 void RVRevSWP(
   double * v,
   int * i,
@@ -295,7 +269,73 @@ void RVRevSWP(
 
 
 
-/* function to print a covarTree */
+/* copy matrix to lower triangular array */
+/* X is the matrix and Y is the lower triangular array */
+void copyMatrixToLowerTriangularArray(double * X, double * Y, int n) {
+
+  int i,j,k,indexI;
+
+  k=0;
+
+  for(i=0;i<n;i++) {
+    indexI=i*n;
+    for(j=i;j<n;j++) Y[k++] = X[indexI +j];
+  }
+
+  return;
+}
+
+
+
+
+/* copy matrix from lower triangular array */
+/* X is the triangular array and Y is the matrix */
+void copyMatrixFromLowerTriangularArray(double * X, double * Y, int n) {
+
+  int i,j,k,indexI;
+  k = 0;
+  for(i=0;i<n;i++) {
+    indexI=i*n;
+    for(j=i;j<n;j++) Y[indexI+j] = X[k++];
+  }
+
+  return;
+}
+
+
+
+
+/* save Parameters */
+void saveParameterEstimates( 
+    double * V, 
+    int k, 
+    int i, 
+    int * index, 
+    double * estimates 
+    ) {
+  int j;
+    
+  int * row = calloc(sizeof( int * ), k);
+
+  // reduce row calculations
+  row[0] = 0;
+  for( j = 1; j < k; j++) row[j] += row[j-1] + k - j + 1;
+  
+  // horizontal across
+  for(j=0; j<i; j++) estimates[(k+1)*index[i] + j] = V[row[j] - j +i]; 
+  
+  // save sigma
+  estimates[(k+1)*index[i] +k] = V[row[i]]; 
+
+  free(row);
+
+  return;
+}
+
+
+
+
+/* sweepTree */
 void sweepTree( 
     covarTreePtr x, 
     double * V, 
@@ -472,3 +512,36 @@ int main( void ) {
 #endif
 
 
+
+#ifdef TEST_SWEEPTREE2 
+int main() {
+
+  int n = 5;
+  int i;
+
+  double * v = calloc(sizeof(double), (n*(n+1))/2);
+  double * x = calloc(sizeof(double), n*n);
+
+
+  for( i=0; i < n*n; i++) x[i] = i+1; 
+
+
+  copyMatrixToLowerTriangularArray(x,v,n);
+  printCovarMatrix(v,n);  
+  
+  for( i=0; i < n*n; i++) x[i] = 0; 
+  
+  copyMatrixFromLowerTriangularArray(v,x,n);
+ 
+  for( i=0; i < (n*(n+1))/2; i++) v[i] = 0; 
+  
+  copyMatrixToLowerTriangularArray(x,v,n);
+  printCovarMatrix(v,n);  
+
+
+  free(x);
+  free(v);
+
+  return 0;
+}
+#endif 

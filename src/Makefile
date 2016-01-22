@@ -4,8 +4,9 @@
 
 
 CC=gcc-5
-CFLAGS=-c -g -DTEST_REBUILDCOVAR -std=c99 -Wall -pedantic  
+#CFLAGS=-c -g -DTEST_REBUILDCOVAR -std=c99 -Wall -pedantic  
 #CFLAGS=-c -g -DTEST_SWEEPTREE -std=c99 -Wall -pedantic  
+CFLAGS=-c -g -DTEST_SWEEPTREE2 -std=c99 -Wall -pedantic  
 LFLAGS= -lm -L/usr/local/lib 
 
 EXE=main

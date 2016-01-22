@@ -18,6 +18,14 @@ void VSWP(
   int n 
 );
 
+
+/* sweep test function */
+void VSWP2(
+  double * x,
+  int i,
+  int n 
+);
+
 /* reverse sweep function */
 void VRevSWP(
   double * v,
@@ -44,6 +52,12 @@ void printFullMatrix ( double * x, int n, int m );
 void printCovarMatrix ( double * x, int k );
 
 void copyCovarMatrix ( double * x, double * y, int k ); 
+
+/* function to copy the contents from a triangular array X to a  matrix Y */
+void copyMatrixFromLowerTrianglularArray(double * X, double * Y, int n); 
+
+/* function to copy the contents from a matrix X to a triangular array Y */
+void copyMatrixToLowerTrianglularArray(double * X, double * Y, int n); 
 
 /* sweepTree */
 void sweepTree( 

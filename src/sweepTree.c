@@ -199,7 +199,7 @@ void VRevSWP(
     xii = v[i*n - (i*(i-1))/2];
   }
   
-  if( xii < 10e-20 ) {
+  if( fabs(xii) < 10e-20 ) {
     printf("SWP: singular matrix.\n");
     return;
   }
@@ -244,10 +244,9 @@ void VRevSWP(
     }
   }
 
+
   /* perform my math */
-  for(j=0; j<N; j++)  {
-    v[j] = y[j] * x[j];
-  };
+  for(j=0; j<N; j++)  v[j] = v[j] - y[j] * x[j];
 
   /* for the case of i == j replace x[j]*xii by xii */
   for(j=0; j<i; j++) {
@@ -269,6 +268,7 @@ void VRevSWP(
 
 
 
+
 /* perform reverse sweep */
 void RVSWP(
   double * v,
@@ -279,6 +279,9 @@ void RVSWP(
   return;
 }
 
+
+
+
 /* perform reverse sweep */
 void RVRevSWP(
   double * v,
@@ -288,6 +291,8 @@ void RVRevSWP(
   VRevSWP(v, *i, *n); 
   return;
 }
+
+
 
 
 /* function to print a covarTree */

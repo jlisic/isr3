@@ -1,5 +1,5 @@
 # this is a test program 
-source('/Rproj/isr/isrnass/isrnass/R/myrswp.R')
+source('~/Documents/ISR/isrnass/R/myrswp.R')
 
 if( !('isr3.check' %in% ls()) ) { 
   print("loading isr3.so")
@@ -97,24 +97,40 @@ out <- RcholInv( t(chol(v)), x )
 
 IStep.out <- RIStep( x, v, v , x < Inf) 
 
-v <- v[1:2,1:2]
 
 
-a <- chol2inv(chol(v))
+y <- (x - x %*% v)
+S.inv <- chol2inv(chol(v))
 
-i <- 2 
-vii <- v[i,i] - v[i,-i] %*% a[-i,-i] %*% v[i,-i]
+z <- x 
 
-a.swp <- myrswp(-a,i,method="chol")
-
-vii2 <- a.swp[i,i]
-
-v[2,2] - v[1,2]^2/v[1,1] 
+i <- 3
+  RS.inv <- myrswp(S.inv,i,method='chol')
+  a <- y[,-i] %*% diag(RS.inv[-i,i])
 
 
+for( i in 1:ncol(v) ) {
+  RS.inv <- myrswp(S.inv,i,method='chol')
+  z[,i] <- y[,-i] %*% RS.inv[-i,i,drop=F]
+}
 
-print(vii)
-print(vii2)
-
+#v <- v[1:2,1:2]
+#
+#
+#
+#i <- 2 
+#vii <- v[i,i] - v[i,-i] %*% a[-i,-i] %*% v[i,-i]
+#
+#a.swp <- myrswp(-a,i,method="chol")
+#
+#vii2 <- a.swp[i,i]
+#
+#v[2,2] - v[1,2]^2/v[1,1] 
+#
+#
+#
+#print(vii)
+#print(vii2)
+#
 
 

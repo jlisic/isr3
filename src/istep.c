@@ -77,7 +77,10 @@ void RIStep(
   double beta  = 0.0;
 
   double * XB;
+  double * SA; // S in tri array mode
+  double * Y;  // final storage
 
+  int c; // place holder for index in multiplication of an imputation step
 
   Rprintf("Input:\n");
   Rprintf("X:\n");
@@ -91,7 +94,12 @@ void RIStep(
 
   // identify completely observered rows in X (startup cost )
   observed = calloc( sizeof(bool), n );
-
+  
+  // allocate our final data 
+  Y = calloc( sizeof(double), n*p );
+  
+  // pre allocate SA
+  SA = calloc( sizeof(double), (p*(p+1))/2);
 
   // find the number of missing values and their index (startup cost)
   // We set the value to -1 if Mindex[i] 
@@ -176,7 +184,51 @@ void RIStep(
 
   // (x - XB)(Sigma.inv_{ii} - Sigma.inv_{-1,-1} 
 
-  SA = copyMatrixFromLowerTriangularArray(S, p);
+  for( i = 0; i < n*p; i++) Y[i] = 0;
+
+  for( i = 0; i < p; i++) {
+    copyMatrixToLowerTriangularArray(S, SA, p); 
+  //Rprintf("SA:\n");
+  //printCovarMatrix(SA,p);  
+
+
+    VRevSWP( SA, i, p); 
+  
+    /*********************************************
+     * 0 
+     * 1  5 
+     * 2  6  9
+     * 3  7 10 12
+     * 4  8 11 13 14
+     ********************************************/
+    Rprintf("X: %d\n", i);
+    RprintMatrixDouble(X, n, p);
+    Rprintf("XB: %d \n", i);
+    RprintMatrixDouble(XB, n, b);
+    Rprintf("SA %d:\n", i);
+    printCovarMatrix(SA,p);  
+  
+    c = i;
+    for(j=0; j <i; j++, c += p - j) {
+      for(k=0; k <n; k++) {
+        printf("j = %d, i = %d, Y[%d] = X[%d] - XB[%d]) * SA[%d] = %f\n",  
+            j, i, i*n+k, j*n+k, j*n+k, c, (X[j*n +k] - XB[j*n +k]) * SA[c]);  
+
+        Y[i*n+k] += (X[j*n +k] - XB[j*n +k]) * SA[c];  
+      }
+    }
+    printf("c = %d\n", c);
+    for(j=i+1; j <p; j++) { 
+      c++; 
+      for(k=0; k <n; k++) {
+        printf("j = %d, i = %d, Y[%d] = X[%d] - XB[%d]) * SA[%d] = %f\n",  
+            j, i, i*n+k, j*n+k, j*n+k, c, (X[j*n +k] - XB[j*n +k]) * SA[c]);  
+        Y[i*n+k] += (X[j*n +k] - XB[j*n +k]) * SA[c];  
+      }
+    }
+  }
+  
+  RprintMatrixDouble(Y, n, p);
 
   //for(i=0;i<p;i++) {
   //VRevSWP( SA, i, p); 
@@ -189,42 +241,11 @@ void RIStep(
   //}
 
 
-  //free(SA);
+  free(SA);
   free(observed);
   free(XB);
 
 
-/*
-  // calculate inverse
-  F77_CALL(dpotri)(
-      "L",        // UPLO
-      n,         // N 
-      v,          // A 
-      n,         // LDA
-      &errorCode  // error code
-      );
-
-  if(errorCode != 0) Rprintf("LAPACK dpotrs failed with error code = %d\n", errorCode);
-
-  Rprintf("CholInv output:\n");
-  RprintMatrix(v, *n, *n);
-   
-  // multiply cholesky inverse by matrix 
-  // v := (alpha) v * x
-  F77_CALL(dtrmm)(
-      "R",        // SIDE 
-      "L",        // UPLO
-      "N",        // TRANSA
-      "N",        // DIAG (Unit Traingular, i.e. diag = 1) 
-       m ,        // M rows of B
-       n ,        // N cols fo B
-       &alpha ,   // ALPHA
-       v,         // A
-       n ,        // LDA rows of A (in this context)
-       x ,        // B
-       m          // LDB 
-      );
-*/
   return;
 }
 

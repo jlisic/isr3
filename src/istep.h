@@ -12,7 +12,7 @@
 #include <R.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
-
+#include "sweepTree.h"
 
 // print out matrix in column major continuous array form 
 void RprintMatrixDouble( double *x , int n, int m ); 

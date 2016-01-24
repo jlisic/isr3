@@ -50,27 +50,6 @@ RIStep <- function(X, S, B, M) {
 }
 
 
-# fortran through C example
-RcholInv <- function( A, B ) {
-
-  if( !is.matrix(A) )    stop(sprintf('A is not a matrix'))
-  if( !is.matrix(B) )    stop(sprintf('B is not a matrix'))
-
-  if( nrow(A) != ncol(A) ) stop( sprintf('X is not square'))
-
-  r.result <- .C("RcholInv",
-    as.double(A),
-    as.double(B),
-    as.integer(nrow(B)),
-    as.integer(ncol(B))
-  )
-
-  X <- matrix(r.result[[2]],ncol=ncol(A))
-
-  return(X) 
-}
-
-
 
 
 

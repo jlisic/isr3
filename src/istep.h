@@ -29,12 +29,6 @@ void RIStep(
   ); 
 
 
-void RcholInv(
-  double * v,
-  double * x,
-  int * m,
-  int * n 
-  ); 
 
 #endif
 

@@ -26,6 +26,11 @@ void RprintMatrixDouble( double *x , int n, int m ) {
  * Create Sweep Tree (Function Done)
  * Subset X by missing items 
  *
+ * *** Assumptions ***
+ * X is fully observed for all variables before 
+ * column maxObsIndex.
+ *
+ *
  * *** P Step ***
  *
  * 1. Run Sweep Tree (Function Done)
@@ -69,6 +74,7 @@ void RIStep(
   int n = *nPtr;
   int p = *pPtr;
   int b = *bPtr;
+  int maxObsIndex = p - b; // maximum observed index
 
   int rowIndexI, rowIndexJ;
   bool * observed;  // vector of length n, T if observed F if not observed 
@@ -81,6 +87,8 @@ void RIStep(
   double * Y;  // final storage
 
   int c; // place holder for index in multiplication of an imputation step
+  
+  int cacheSize = 0; // used to determine cache size for sweep tree
 
   Rprintf("Input:\n");
   Rprintf("X:\n");
@@ -91,6 +99,38 @@ void RIStep(
 
   /****************** Step 0 *******************/
 
+  //still need index (what is index?)
+  //still need M ( get dim / req )
+  //still need regIndex (what is regIndex?)   
+
+  /************* P Step Setup *********/
+  
+  // sweep tree for P step 
+  covarTreePtr myTree = NULL;
+
+  // create MBool for the conversion, we will throw it away after we 
+  // create the covar tree
+  MBool = calloc( sizeof( bool *), p);
+  for(j=0;j<p;j++) MBool[j] = (bool) M[j];
+
+  // create tree
+  myTree = createCovarTree( NULL, MBool, p, regIndex[0], 0, &cacheSize); 
+  for(i=1;i<b;i++) {
+    for(j=0;j<p;j++) MBool[j] = (bool) M[i*p + j];
+    myTree = createCovarTree(myTree, MBool, p, regIndex[i], 0, &cacheSize); 
+  }
+
+  // we are done with MBool;
+  free(MBool);
+  MBool = NULL;
+
+  // allocate space for the cache
+  cache = calloc( sizeof(double *) , cacheSize+1 );
+
+  // allocate space for the estimates
+  est = calloc( b * (p+1), sizeof(double) );
+
+  /************* I Step Setup *********/
 
   // identify completely observered rows in X (startup cost )
   observed = calloc( sizeof(bool), n );
@@ -100,6 +140,7 @@ void RIStep(
   
   // pre allocate SA
   SA = calloc( sizeof(double), (p*(p+1))/2);
+  
 
   // find the number of missing values and their index (startup cost)
   // We set the value to -1 if Mindex[i] 
@@ -113,6 +154,23 @@ void RIStep(
 
   for( i = 0; i < n; i++) Rprintf("(%d) %s\n", i, observed[i] ? "True" : "False");
  
+  /****************** Step 1 *******************/
+  /* Calculate Beta and sigma of the           */
+  /* conditional distributions.                */
+  /****************** Step 1 *******************/
+  
+  sweepTree(myTree, x, 5, cache, index, est);
+  
+  /****************** Step 2 *******************/
+  /* Generate deviates per the sweep tree      */
+  /****************** Step 2 *******************/
+  
+  /****************** Step 3 *******************/
+  /* Rebuild covariance                        */
+  /****************** Step 3 *******************/
+  
+  rebuildCovar( est, SA, b);
+
 
   /****************** Step 4 *******************/
   /* Calculate XB = X * Beta                   */
@@ -230,15 +288,6 @@ void RIStep(
   
   RprintMatrixDouble(Y, n, p);
 
-  //for(i=0;i<p;i++) {
-  //VRevSWP( SA, i, p); 
-  //
-  //
-  // //store new missing in X
-  //for(j=0; j <n; j++) { 
-  //
-  //}
-  //}
 
 
   free(SA);
@@ -246,55 +295,6 @@ void RIStep(
   free(XB);
 
 
-  return;
-}
-
-
-void RcholInv(
-  double * v,
-  double * x,
-  int * m,
-  int * n 
-  ) {
-
-  int errorCode;
-  int i,j;
-  double alpha = 1.0;
-
-  Rprintf("Input:\n");
-  RprintMatrixDouble(v, *n, *n);
-
-
-
-  // calculate inverse
-  F77_CALL(dpotri)(
-      "L",        // UPLO
-      n,         // N 
-      v,          // A 
-      n,         // LDA
-      &errorCode  // error code
-      );
-
-  if(errorCode != 0) Rprintf("LAPACK dpotrs failed with error code = %d\n", errorCode);
-
-  Rprintf("CholInv output:\n");
-  RprintMatrixDouble(v, *n, *n);
-   
-  // multiply cholesky inverse by matrix 
-  // v := (alpha) v * x
-  F77_CALL(dtrmm)(
-      "R",        // SIDE 
-      "L",        // UPLO
-      "N",        // TRANSA
-      "N",        // DIAG (Unit Traingular, i.e. diag = 1) 
-       m ,        // M rows of B
-       n ,        // N cols fo B
-       &alpha ,   // ALPHA
-       v,         // A
-       n ,        // LDA rows of A (in this context)
-       x ,        // B
-       m          // LDB 
-      );
   return;
 }
 

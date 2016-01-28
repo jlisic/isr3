@@ -1,6 +1,6 @@
 # this is a test program 
 library(isrnass)
-source('~/src/isr3/R/mnp.R')
+#source('~/src/isr3/R/mnp.R')
 
 if( !('isr3.check' %in% ls()) ) { 
   print("loading isr3.so")
@@ -10,9 +10,9 @@ if( !('isr3.check' %in% ls()) ) {
 
 
 
-rmvnorm <- function(count, mu, sigma) { 
-  return(RMVN2(mu,sigma))
-}
+#rmvnorm <- function(count, mu, sigma) { 
+#  return(RMVN2(mu,sigma))
+#}
 
 
 
@@ -22,7 +22,10 @@ rmvnorm <- function(count, mu, sigma) {
 # M, matrix of correlation relationships
 #    If a variable has a missing variable, an entry must exist in M.
 
-isr <- function(X, M, intercept=T) {
+isr <- function(X, M, mcmcIter=10, Xobserved, intercept=T) {
+  
+  # get missing values in X observed
+  if( missing(Xobserved) ) Xobserved <- !is.na(X)  
 
   if(intercept) {
     X.names <- colnames(X)
@@ -32,15 +35,15 @@ isr <- function(X, M, intercept=T) {
     M.names <- colnames(M)
     M <- cbind(1,M)
     colnames(M) <- c("B_0",M.names)
+
+    # add col to Xobserved
+    Xobserved <- cbind(1,Xobserved)
   }
 
   # get dimensions
   n <- nrow(X)
   p <- ncol(X)
   b <- nrow(M)
-
-  # get missing values in X observed
-  Xobserved <- !is.na(X)  
 
   Sigma <- matrix(0,p,p) 
   est <- matrix(0,b,p+1) 
@@ -79,10 +82,14 @@ isr <- function(X, M, intercept=T) {
     as.integer(p),
     as.integer(b),
     as.double(c(Sigma)),
-    as.double(c(est))
+    as.double(c(est)),
+    as.integer(mcmcIter)
   )
 
-  return(r.result)
+  E <- matrix( r.result[[1]], nrow=n)
+  colnames(E) <- colnames(M) 
+
+  return(E)
 
 }
 
@@ -92,6 +99,7 @@ isr <- function(X, M, intercept=T) {
 
 
 set.seed(100)
+mcmciter <- 1000 
 
 
 # this is a list of all dependent and independent variables
@@ -103,7 +111,7 @@ varList <-  c("Var1", "Var2", "Var3")
 
 # simulation parameters
 set.seed(100)
-n <- 10
+n <- 50000
 p <- 5
 
 # generate some data N_5(0,v)
@@ -136,12 +144,15 @@ fitMatrix <- matrix( c(
 colnames(fitMatrix) <- covarList 
 rownames(fitMatrix) <- varList 
 
+dat.tmp <- X
+obs.tmp <- (X < Inf) * 1
+obs.tmp[7:10,varList] <- 0 
 
 
 # perform ISR 
 set.seed(100)
 sweep.time <- proc.time()
-E<-  isr(X,fitMatrix)
+E<-  isr(dat.tmp,fitMatrix,mcmcIter=mcmciter,obs.tmp)
 print(proc.time() - sweep.time)
 
 
@@ -165,21 +176,18 @@ index.tmp <- matrix(
 rownames(index.tmp) <- c('CoVar1','CoVar2','Var1','Var2','Var3')
 colnames(index.tmp) <- c( 'Column Number', 'Missingness Indicator', 'Variable Type', 'Transformation Type', 'Category', 'Group Indicator')
 
-dat.tmp <- X
-obs.tmp <- (X < Inf) * 1
 
 source('~/Documents/ISR/isrnass/R/PStep.R')
 source('~/Documents/ISR/isrnass/R/fixVariableNames.R')
 source('~/Documents/ISR/isrnass/R/myswp.R')
 source('~/Documents/ISR/isrnass/R/myrswp.R')
 source('~/Documents/ISR/isrnass/R/inOrder.R')
-#library(mvtnorm)
+library(mvtnorm)
 ord <-  c(3,4,5)
 badcovar <- c()
 intersects <- c()
 grps <- c()
 
-mcmciter <- 1
 
 set.seed(100)
 sweep.time <- proc.time()
@@ -210,8 +218,7 @@ dat.new=ISR.ARMS(
 print(proc.time() - sweep.time)
 
 
-
-
-
+print("max diff")
+print( max(abs(cbind(1,dat.new) - E)))
 
 

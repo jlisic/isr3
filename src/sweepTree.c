@@ -361,8 +361,8 @@ void saveParameterEstimates(
     sample = calloc( sizeof( double ), m);
    
      
-//conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
-    conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m); 
+    conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
+    //conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m); 
     
     // copy over the mean & var 
     l = i; o = 0; m = 0; v = 0;
@@ -379,8 +379,8 @@ void saveParameterEstimates(
     }
 
     // generate a deviate 
-//ArMVN( sample, mean, var, j);
-    for(j=0;j<m;j++) sample[j] = mean[j];
+    ArMVN( sample, mean, var, j);
+    //for(j=0;j<m;j++) sample[j] = mean[j];
  
     // write results to estimates 
     for(j=0,m=0; j<i; j++) if( M[k*index[i] +j] ) estimates[(k+1)*index[i] + j] = sample[m++]; 

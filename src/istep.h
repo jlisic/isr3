@@ -10,6 +10,8 @@
 #include <math.h>
 #include <Rmath.h>
 #include <R.h>
+#include <Rmath.h>
+#include <R_ext/Utils.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
 #include "sweepTree.h"

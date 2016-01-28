@@ -7,7 +7,8 @@ if( !('isr3.check' %in% ls()) ) {
 }
 
 #SWP
-sweepTree <- function( V, M ) {
+print("This test needs to be rewritten to use X, instead of V")
+sweepTree <- function( V, M,n=0 ) {
 
   # check V properties
   p <- dim(V)
@@ -29,10 +30,18 @@ sweepTree <- function( V, M ) {
   # get positions in M of rownames
   regIndex <- as.integer(sapply(regVars, FUN=match, rownames(V) ))
   if(is.na(sum(regIndex))) stop(sprintf('Row names differ between V and M'))
+  
 
   # create a reverse mapping
   mapIndex <- rep(0,p[1])
   mapIndex[regIndex] <- 1:length(regIndex) 
+  
+  
+  print("regIndex") 
+  print(regIndex-1) 
+  
+  print("mapIndex") 
+  print(mapIndex-1) 
 
   r.result <- .C("RSweepTree",
     as.double(V[lower.tri(V,T)]), 
@@ -41,10 +50,10 @@ sweepTree <- function( V, M ) {
     as.double(rep(0,m[1]*(p[1]+1))),
     as.integer(mapIndex-1), 
     as.integer(p[1]),
-    as.integer(m[1])
+    as.integer(m[1]),
+    as.integer(n)
   )
 
-  debugResult <<- r.result[[4]]  
   E <- matrix( r.result[[4]] ,ncol=p[1]+1,byrow=T) 
   #E <- E[regIndex,]
   E <- E * cbind(M,1)

@@ -13,9 +13,12 @@
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
 #include "sweepTree.h"
+#include "rebuildCovar.h"
 
 // print out matrix in column major continuous array form 
 void RprintMatrixDouble( double *x , int n, int m ); 
+void RprintMatrixInt( int *x , int n, int m ); 
+void RprintMatrixBool( bool *x , int n, int m ); 
 
 
 void RIStep(

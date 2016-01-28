@@ -4,12 +4,12 @@
 
 /* function to create a new covarTree */
 covarTreePtr createCovarTree( 
-    covarTreePtr x, 
-    bool * covarList, 
-    int covarListLength,
-    int varIndex,
-    int covarIndex,
-    int * cacheIndex 
+    covarTreePtr x,      // root node of tree
+    bool * covarList,    // array of inclusion and excusion of covariates
+    int covarListLength, // number of covariates 
+    int varIndex,        // varIndex to store
+    int covarIndex,      // covar starting point usually 0
+    int * cacheIndex     // index of cache
     ) {
   
   if( covarListLength > 0 ) {  // not the last covar

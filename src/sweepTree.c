@@ -309,26 +309,187 @@ void copyMatrixFromLowerTriangularArray(double * X, double * Y, int n) {
 void saveParameterEstimates( 
     double * V, 
     int k, 
-    int i, 
+    int i,             // index from index to save estimate 
     int * index, 
-    double * estimates 
+    double * estimates,
+    bool * M,
+    int df 
     ) {
-  int j;
+  int j,l,m,o,p,v;
+  
+  int n = (k*(k+1))/2;
+  double * sample; 
+  double * mean;
+  double * var;
+  double conditionalVar;
+  
+
+  /*
+   *    0
+   *    1  6  
+   *    2  7 11 
+   *    3  8 12 15
+   *    4  9 13 16 18
+   *    5 10 14 17 19 20
+   *
+   *    move along row i:
+   *    row i, col 0:  c =  i 
+   *    row i, col 1:  c += k - 1   
+   *    row i, col 2:  c += k - 2 
+   *    row i, col 3:  c += k - 3 
+   *    row i, col 4:  c += k - 4 
+   *    row i, col 5:  c += k - 5 
+   *    ...
+   *    row i, col j:  c += k - j 
+   *
+   *    move along diag
+   *    diag 0: 0
+   *    diag 1: c+= k 
+   *    diag 2: c+= k - 1 
+   *    diag 3: c+= k - 2 
+   *    diag 4: c+= k - 3
+   *    diag 5: c+= k - 4 
+   *    ...
+   *    diag j = c+= k - j + 1
+   */
+  if( M != NULL ) { 
     
-  int * row = calloc(sizeof( int * ), k);
+    // figure out how many covariates are there 
+    for(j=0,m=0; j < i; j++) if( M[k*index[i]+j] ) m++; 
+    var = calloc( sizeof( double ), (m*(m+1))/2 );
+    mean  = calloc( sizeof( double ), m);
+    sample = calloc( sizeof( double ), m);
+   
+     
+//conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
+    conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m); 
+    
+    // copy over the mean & var 
+    l = i; o = 0; m = 0; v = 0;
+    for(j=0;j<i;j++){
+      
+      if( M[k*index[i]+j] ) {
+        mean[m++]=V[l]; // write mean to Model if the term isn't missing 
+        for(p=o;p < l;p++) var[v++] = conditionalVar * V[p];  
+      }
+      
+      l += k - j - 1;       // move between columns in lower triangual array for row i 
+      o += k - j ;   // move along diag on lower triangual array for row i 
+      
+    }
 
-  // reduce row calculations
-  row[0] = 0;
-  for( j = 1; j < k; j++) row[j] += row[j-1] + k - j + 1;
+    // generate a deviate 
+//ArMVN( sample, mean, var, j);
+    for(j=0;j<m;j++) sample[j] = mean[j];
+ 
+    // write results to estimates 
+    for(j=0,m=0; j<i; j++) if( M[k*index[i] +j] ) estimates[(k+1)*index[i] + j] = sample[m++]; 
+    estimates[(k+1)*index[i] +k] = -1.0 * conditionalVar; 
+
+    free(sample);
+    free(mean);
+    free(var);
+  }
+
+  return;
+}
+
+
+
+/* r interface for ArMVN */
+void RMVN2(
+    double * sample,
+    double * mean,
+    double * var,
+    int * sizePtr
+    ) {
+
+  GetRNGstate();
+  ArMVN(sample, mean, var , *sizePtr); 
+  PutRNGstate();
+
+  return;
+}
+
+
+
+/* Gibbs sampling approach to generate a deviate from a MVN dist with mean=mean and var=var */
+void ArMVN(                      
+	  double *sample,         // sample array of length size
+	  double *mean,           // mean array of length size 
+	  double *var,            // the lower triangular array of the variance 
+	  int size                // length of mean and dim of var 
+ ) {
+  int i,j,k,l;
+  int n = ((size+1)*(size+2))/2;
+  double * S = calloc( sizeof(double), n);
+  double conditionalMean;
+    
+  /* draw from mult. normal using SWP */
+  /* S:
+   *   0   1   2   3
+   * 0 -1    
+   * 1 M0  V00 
+   * 2 M1  V10 V11 
+   * 3 M2  V20 V21 V22 
+   *
+   *    0
+   *    1  6  
+   *    2  7 11 
+   *    3  8 12 15
+   *    4  9 13 16 18
+   *    5 10 14 17 19 20
+   *
+   *    move along row i:
+   *    row i, col 0:  c =  i 
+   *    row i, col 1:  c += size   
+   *    row i, col 2:  c += size - 1
+   *    row i, col 3:  c += size - 2 
+   *    row i, col 4:  c += size - 3 
+   *    row i, col 5:  c += size - 4 
+   *    ...
+   *    row i, col j:  c += size - j +1  
+   *
+   *    move along diag
+   *    diag 0: 0
+   *    diag 1: c+= size + 1
+   *    diag 2: c+= size
+   *    diag 3: c+= size -1 
+   *    diag 4: c+= size -2
+   *    diag 5: c+= size -3
+   *
+   *    diag j = c+= size -j +2
+   */
+  S[0] = -1;
+  for(i=1;i<=size;i++) S[i]=mean[i-1];
+  for(i=size+1,j=0;i<n;i++,j++) S[i]=var[j];
+
+  // sample 0 = Z * sd00 + M0
+  sample[0]= norm_rand() * sqrt(S[size+1]) + S[1];
+
+  // init index for diagonal
+  l = size+1;
+  for(i=2;i<=size;i++){
+
+    l += size - i + 2; 
+
+    // perform sweep
+    VSWP(S,i-1,size+1);
+   
+    // get the conditional mean 
+    conditionalMean=S[i];
   
-  // horizontal across
-  for(j=0; j<i; j++) estimates[(k+1)*index[i] + j] = V[row[j] - j +i]; 
+    // multiply the conditional mean times beta 
+    k=i;
+    for(j=1;j<i;j++){
+      k += size - j + 1; 
+      conditionalMean+=sample[j-1]*S[k];
+    }
   
-  // save sigma
-  estimates[(k+1)*index[i] +k] = V[row[i]]; 
-
-  free(row);
-
+    sample[i-1]= norm_rand() * sqrt(S[l]) + conditionalMean;
+  }
+  
+  free(S);
   return;
 }
 
@@ -342,7 +503,9 @@ void sweepTree(
     int k, 
     double ** matrixCache, 
     int * index,
-    double * estimates 
+    double * estimates,
+    bool * M,
+    int n 
   ) {
 
   int i;
@@ -353,7 +516,7 @@ void sweepTree(
   if( x->varList != NULL) {
     for( i = 0; i < x->varListLength; i++) {
       //printf("Variable = %d\n", x->varList[i] );
-      saveParameterEstimates(V, k, x->varList[i], index, estimates);
+      saveParameterEstimates(V, k, x->varList[i], index, estimates,M,n);
     }
     return;
   }
@@ -368,14 +531,14 @@ void sweepTree(
   if( x->yes != NULL) {
     VSWP(V,x->index,k);
     //printCovarMatrix(V,k);
-    sweepTree(x->yes,V,k,matrixCache,index,estimates);
+    sweepTree(x->yes,V,k,matrixCache,index,estimates,M,n);
   }
   if( x->no != NULL) {
     // get matrixCache if x->yes is not null
     if( x->yes != NULL) copyCovarMatrix(V,matrixCache[x->cacheIndex],k);
 
     // sweep in matrixCache 
-    sweepTree(x->no,V,k,matrixCache,index,estimates);
+    sweepTree(x->no,V,k,matrixCache,index,estimates,M,n);
 
     // free the matrixCache 
     if( matrixCache[x->cacheIndex] != NULL ) {
@@ -398,7 +561,8 @@ void RSweepTree(
   double * est,        // p by p matrix of parameter estimates
   int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
   int  *   pPtr,       // number of rows/cols in x
-  int  *   mPtr        // number of rows in M 
+  int  *   mPtr,       // number of rows in M 
+  int * n              // number of obs used to calc x
 ) {
 
 
@@ -431,7 +595,7 @@ void RSweepTree(
   cache = calloc( sizeof(double *) , cacheSize+1 );
 
   // estimate parameters for model through tree
-  sweepTree(myTree, x, p, cache, index, est);
+  sweepTree(myTree, x, p, cache, index, est, MBool,*n);
 
   free(MBool);
   free(cache);
@@ -495,7 +659,7 @@ int main( void ) {
 
   //printf("Cache Size = %d\n",cacheSize);
   cache = calloc( sizeof(double *) , cacheSize+1 );
-  sweepTree(myTree, x, 5, cache, index, est);
+  sweepTree(myTree, x, 5, cache, index, est,NULL,0);
 
 
   //printFullMatrix( est, m, n+1);

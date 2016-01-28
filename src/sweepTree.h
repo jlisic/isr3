@@ -8,8 +8,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <R_ext/Utils.h>
+#include <R.h>
+#include <Rmath.h>
 #include "covarTree.h"
-
 
 /* sweep function */
 void VSWP(
@@ -40,6 +42,14 @@ void RVSWP(
   int * n 
 );
 
+/* R interface for RMVN2 */
+void RMVN2(
+    double * sample,
+    double * mean,
+    double * var,
+    int * sizePtr
+    ); 
+
 /* R reverse sweep function interface*/
 void RVRevSWP(
   double * v,
@@ -66,11 +76,13 @@ void sweepTree(
     int k, 
     double ** matrixCache, 
     int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
-    double * estimates 
+    double * estimates ,
+    bool * M,
+    int n
     ); 
 
 /* save parameters */
-void saveParameterEstimates( double * V, int k, int i, int * index, double * estimates ); 
+void saveParameterEstimates( double * V, int k, int i, int * index, double * estimates, bool * M, int df ); 
 
 /* R interface */
 void RSweepTree( 
@@ -80,8 +92,17 @@ void RSweepTree(
   double * est,        // p by p matrix of parameter estimates
   int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
   int  *   pPtr,       // number of rows/cols in x
-  int  *   mPtr        // number of rows in M 
+  int  *   mPtr,       // number of rows in M 
+  int *n                // number of observations used to generate x
 ); 
+
+/* Gibbs sampling approach to generate a deviate from a MVN dist with mean=mean and var=var */
+void ArMVN(                      
+	  double *sample,         // sample array of length size
+	  double *mean,           // mean array of length size 
+	  double *var,            // the lower triangular array of the variance 
+	  int size                // length of mean and dim of var 
+ ); 
 
 #endif
 

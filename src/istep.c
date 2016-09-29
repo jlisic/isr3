@@ -104,13 +104,14 @@ void Risr(
   int * bPtr,       // the length of beta
   double * S,       // variance of dim p by p [ only returned ] 
   double * est,     // estimate               [ only returned ]
-  int * maxIter  // number of iters
+  int * maxIter,    // number of iters
+  int * sampleRate // how often to sample
   ) {
 
   int errorCode;  // lapack error code
   int i,j,k,m;
-  int n = *nPtr;
-  int p = *pPtr;
+  int n = *nPtr;  // number of records (observations, observed or not)
+  int p = *pPtr;  // number of variables
   int b = *bPtr;
   int maxObsIndex = p - b; // maximum observed index
 
@@ -222,17 +223,9 @@ void Risr(
          &p         // LDC 
         );
     
-  //Rprintf("XX:\n");
-  //RprintMatrixDouble(XX, p, p);
     copyMatrixToLowerTriangularArray(XX, SA, p); 
     
     sweepTree(myTree, SA, p, cache, index, est, MBool,n);
-   /* 
-    Rprintf("Est:\n");
-    RprintMatrixDouble(est, p+1, b);
-   */ 
-   
-  
   
     /****************** Step 3 *******************/
     /* Rebuild covariance                        */
@@ -251,31 +244,17 @@ void Risr(
   
     for(i=0; i < b; i++) 
       for(j=0; j <= b; j++) estRebuild[i*(b+1)+j ] = est[i*(p+1)+p-b+j]; 
-    
-  //  Rprintf("Est Rebuilt:\n");
-  //  RprintMatrixDouble(estRebuild, b+1, b);
   
     rebuildCovar( estRebuild, SA, b);
     
-  //  Rprintf("Sigma Rebuilt:\n");
-  //  printCovarMatrix(SA,b);  
-  
-  
     /****************** Step 4 *******************/
     /* Calculate XB = X * Beta                   */
     /****************** Step 4 *******************/
     
     for(i=0; i < b; i++) 
       for(j=0; j < p ; j++) Beta[i*p+j] = est[i*(p+1) + j]; 
-    
-  //  Rprintf("XB:\n");
-  //  RprintMatrixDouble(XB, n, p);
-    
-  //  Rprintf("B:\n");
-  //  RprintMatrixDouble(Beta, p, b);
   
     // missing XBeta values 
-    
     
     // multiply matrix by vector, updating the vector each step 
     // y := (alpha) A * x + (beta) * y 
@@ -295,8 +274,6 @@ void Risr(
         );
       for(j=0; j < n; j++) XB[m*n +j] = Y[j];
     } 
-  //  Rprintf("XB:\n");
-  //  RprintMatrixDouble(XB, n, p);
   
   
     /****************** Step 5 *******************/
@@ -313,9 +290,6 @@ void Risr(
         );
   
     if(errorCode != 0) Rprintf("LAPACK dpotrf failed with error code = %d\n", errorCode);
-    
-  //  Rprintf("Sigma L (cholesky):\n");
-  //  printCovarMatrix(SA,b);  
   
     // calculate inverse
     F77_CALL(dpptri)(
@@ -326,17 +300,12 @@ void Risr(
         );
   
     if(errorCode != 0) Rprintf("LAPACK dpotrs failed with error code = %d\n", errorCode);
-  
-  //  Rprintf("Sigma Inv:\n");
-  //  printCovarMatrix(SA,b);  
-   
-  
+ 
+
     /****************** Step 6 *******************/
     /* Get conditional means and variances       */ 
     /****************** Step 6 *******************/
-  
     // (x - XB)(Sigma.inv_{ii} - Sigma.inv_{-1,-1} 
-  
   
     // create offsets 
     X_tmp = &(X[n*(p-b)]);
@@ -378,6 +347,12 @@ void Risr(
       }
     
   
+    }
+
+    // save result
+    if( iter % (*sampleRate) == 0) {
+      for(i=0;i<n*b;i++) S[i] = X_tmp[i];
+      S = &(S[n*b]);
     }
   }
     

@@ -1,12 +1,6 @@
-# this is a test program 
+# test function
 
-if( !('isr3.check' %in% ls()) ) { 
-  print("loading isr3.so")
-  dyn.load('~/src/isr3/src/covarTree.so')
-  isr3.check <- T
-}
 
-#SWP
 rebuildCovar <- function( E ) {
 
 

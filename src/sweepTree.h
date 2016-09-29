@@ -57,11 +57,14 @@ void RVRevSWP(
   int * n 
 ); 
 
+/* diagnostic functions */
 void printFullMatrix ( double * x, int n, int m );
 
 void printCovarMatrix ( double * x, int k );
 
 void copyCovarMatrix ( double * x, double * y, int k ); 
+
+void printFullMatrixBool ( bool * x, int n, int m ); 
 
 /* function to copy the contents from a triangular array X to a  matrix Y */
 void copyMatrixFromLowerTriangularArray(double * X, double * Y, int n); 

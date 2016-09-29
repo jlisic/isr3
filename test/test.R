@@ -1,6 +1,4 @@
-source('sweepTree.R')
-source('rebuildCovar.R')
-source('getCovs.R')
+library(ISR3)
 
 ######################################################################
 # The basic idea here is to take a set of variables and covariates,
@@ -19,7 +17,7 @@ varList <-  c("Var1", "Var2", "Var3")
 
 # simulation parameters
 set.seed(100)
-n <- 100000 
+n <- 100
 
 
 # variable relationsips
@@ -82,7 +80,6 @@ rownames(fitMatrix) <- varList
 sweep.time <- proc.time()
 E<-  sweepTree(XX,fitMatrix)
 print(proc.time() - sweep.time)
-
 
 
 ###############################################

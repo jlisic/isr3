@@ -1,3 +1,5 @@
+# test function
+
 getCovs <-
 function (betas,sigmas,p=length(sigmas)) {
   ### betas is a p x p matrix with 0's in the diagonal and the upper triangle.

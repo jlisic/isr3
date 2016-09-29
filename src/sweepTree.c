@@ -30,10 +30,21 @@ void printFullMatrix ( double * x, int n, int m ) {
 }
 
 
+/* copy matrix function */
+void printFullMatrixBool ( bool * x, int n, int m ) {
+  int i, j;
 
-
-
-
+  for( i = 0; i < m; i++) printf("%d\t", i); 
+  printf("\n");
+  
+  for( i = 0; i < n; i++) {
+    for( j = 0; j < m; j++) {
+      printf("%s, ", x[m*i + j] ? "T":"F");
+    }
+    printf("\n");
+  }
+  return;
+}
 
 
 /* copy covar matrix function */
@@ -308,16 +319,17 @@ void copyMatrixFromLowerTriangularArray(double * X, double * Y, int n) {
 /* save Parameters */
 void saveParameterEstimates( 
     double * V, 
-    int k, 
+    int k,             // variabls + parameters
     int i,             // index from index to save estimate 
     int * index, 
     double * estimates,
     bool * M,
     int df 
     ) {
+
   int j,l,m,o,p,v;
   
-  int n = (k*(k+1))/2;
+  //int n = (k*(k+1))/2; // dim for lower diagonal including diagonal
   double * sample; 
   double * mean;
   double * var;
@@ -354,15 +366,14 @@ void saveParameterEstimates(
    */
   if( M != NULL ) { 
     
-    // figure out how many covariates are there 
+    // figure out how many covariates there are 
     for(j=0,m=0; j < i; j++) if( M[k*index[i]+j] ) m++; 
     var = calloc( sizeof( double ), (m*(m+1))/2 );
     mean  = calloc( sizeof( double ), m);
     sample = calloc( sizeof( double ), m);
    
-     
-    conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
-    //conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m); 
+    //conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
+    conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m); 
     
     // copy over the mean & var 
     l = i; o = 0; m = 0; v = 0;
@@ -379,8 +390,8 @@ void saveParameterEstimates(
     }
 
     // generate a deviate 
-    ArMVN( sample, mean, var, j);
-    //for(j=0;j<m;j++) sample[j] = mean[j];
+    //ArMVN( sample, mean, var, j);
+    for(j=0;j<m;j++) sample[j] = mean[j];
  
     // write results to estimates 
     for(j=0,m=0; j<i; j++) if( M[k*index[i] +j] ) estimates[(k+1)*index[i] + j] = sample[m++]; 
@@ -510,6 +521,7 @@ void sweepTree(
 
   int i;
 
+  // check for null trees
   if( x == NULL ) return; 
  
   // this is where we write it out 
@@ -522,22 +534,33 @@ void sweepTree(
   }
 
   // to add, if both are not null, then cache
+  /*    
+          |
+        1. cache, 3. use cache
+       /     \
+  2. cache   4. no cache  
+     /  \      \
+  */
   if( (x->yes != NULL) & (x->no != NULL) ) {
     matrixCache[x->cacheIndex] = calloc( sizeof(double), (k*(k+1))/2 );
     copyCovarMatrix(matrixCache[x->cacheIndex],V,k);
     //printCovarMatrix(matrixCache[x->cacheIndex],k);
   }
 
+  // sweep to the left (yes)
   if( x->yes != NULL) {
     VSWP(V,x->index,k);
     //printCovarMatrix(V,k);
+    // move to the yes
     sweepTree(x->yes,V,k,matrixCache,index,estimates,M,n);
   }
+
+  // don't sweep to the right (no)
   if( x->no != NULL) {
     // get matrixCache if x->yes is not null
     if( x->yes != NULL) copyCovarMatrix(V,matrixCache[x->cacheIndex],k);
 
-    // sweep in matrixCache 
+    // move to the no 
     sweepTree(x->no,V,k,matrixCache,index,estimates,M,n);
 
     // free the matrixCache 
@@ -551,14 +574,15 @@ void sweepTree(
 }
 
 
-
+// question to jon of programming past, what is est
 
 /* R interface */
 void RSweepTree( 
   double * x,          // upper (lower in R) triangular matrix including diag
-  int *   M,          // m by p matrix of model parameter inclusions 
-  int  * regIndex,   // variables (row indexes) that will be regressed
-  double * est,        // p by p matrix of parameter estimates
+  int *   M,           // m by p matrix of model parameter inclusions 
+  int  * regIndex,     // variables (row indexes) that will be regressed
+  double * est,        // m by p +2 matrix of parameter estimates and degrees of freedom
+                       // index p is for var, index p+1 is for df
   int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
   int  *   pPtr,       // number of rows/cols in x
   int  *   mPtr,       // number of rows in M 
@@ -577,19 +601,28 @@ void RSweepTree(
   cacheSize = 0;
 
 //debug
-//printCovarMatrix(x,p);
+printCovarMatrix(x,p);
 
   // fix an annoying R interface issue, e.g. .C does not support logical to boolean
   MBool = calloc( sizeof( bool *), p);
   for(j=0;j<p;j++) MBool[j] = (bool) M[j];
 
+printf("M:\n");
+for(j=0;j<p;j++) printf("%s ", MBool[j] ? "T" : "F");
+printf("\n");
+
   // create tree
   myTree = createCovarTree( NULL, MBool, p, regIndex[0], 0, &cacheSize); 
   for(i=1;i<m;i++) {
     for(j=0;j<p;j++) MBool[j] = (bool) M[i*p + j];
+  
+for(j=0;j<p;j++) printf("%s ", MBool[j] ? "T" : "F");
+printf("\n");
     
     myTree = createCovarTree(myTree, MBool, p, regIndex[i], 0, &cacheSize); 
   }
+
+  printCovarTree(myTree);
 
   // allocate space for the cache
   cache = calloc( sizeof(double *) , cacheSize+1 );

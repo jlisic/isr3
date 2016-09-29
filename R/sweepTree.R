@@ -1,13 +1,22 @@
-# this is a test program 
+#' Sweep Tree Function
+#' 
+#' \code{sweepTree} performs multiple sequences of sweep operations. To increase
+#' computational stability no reverse sweeps are performed.  Instead this function
+#' uses a binary tree and caching to reduce computational burden.
+#'
+#' @param V A symmetric matrix to be swept; this matrix cannot contain missing
+#'   data or infinite values.
+#' @param M A logical matrix used to detmine sweep order.
+#' @param n WHO KNOWS
+#' @return WHO KNOWS
+#' @details WHO KNOWS  
+#' @examples 
+#' set.seed(100)
+#' @useDynLib ISR3
+#' @export
 
-if( !('isr3.check' %in% ls()) ) { 
-  print("loading isr3.so")
-  dyn.load('~/src/isr3/src/covarTree.so')
-  isr3.check <- T
-}
 
 #SWP
-print("This test needs to be rewritten to use X, instead of V")
 sweepTree <- function( V, M,n=0 ) {
 
   # check V properties
@@ -15,6 +24,9 @@ sweepTree <- function( V, M,n=0 ) {
   if( is.null(p[1]) )    stop(sprintf('V is not a matrix'))
   if( p[1] != p[2] )     stop(sprintf('V is not a square matrix'))
 
+  # if missing create B
+  if(missing(M)) {M <- as.logical(matrix(1,p,p)); print('missing M') }
+  
   # check that M is logical
   if(!is.logical(M)) stop(sprintf('M is not logical (boolean)'))
 
@@ -43,11 +55,13 @@ sweepTree <- function( V, M,n=0 ) {
   print("mapIndex") 
   print(mapIndex-1) 
 
+  print(M)
+  
   r.result <- .C("RSweepTree",
     as.double(V[lower.tri(V,T)]), 
     as.integer(c(t(M))),
     as.integer(regIndex -1),
-    as.double(rep(0,m[1]*(p[1]+1))),
+    as.double(rep(0,m[1]*(p[1]+1))), # estimate
     as.integer(mapIndex-1), 
     as.integer(p[1]),
     as.integer(m[1]),

@@ -3,6 +3,29 @@
 
 
 /* function to create a new covarTree */
+/*
+ * The covar tree goes to the left when a covar is included, and to the
+ * right when it is not.  Consider the case of regressing X3, X4, and X5 
+ * on X = {X1|...|X5}, where X3 and X5 are near-singular.
+ *
+ *    X1 X2 X3 X4 X5
+ * X3  1  1  0  0 0
+ * X4  1  1  1  0 0
+ * X5  1  1  0  1 0
+ *
+ * Tree Structure:
+ *                          X1=1
+ *            X2=1
+ *      X3=1         X3=0                  
+ *      X4=0      X4=1  X4=0  
+ *      X5=0      X5=0  X5=0   
+ *
+ *   Cache points are created when both children are populated.
+ *   In this example there is a cache point at X2=1 and X3=0|X2=1.
+ *   When we create the covar tree, we don't set these points yet,
+ *   instead we create a mapping to an array of matrix pointers
+ *   that will be populated at a later time.
+ */
 covarTreePtr createCovarTree( 
     covarTreePtr x,      // root node of tree
     bool * covarList,    // array of inclusion and excusion of covariates
@@ -26,14 +49,17 @@ covarTreePtr createCovarTree(
       x->no = NULL;                   // no, the covariate index is not swept
     }
 
+    // if the covarlist is true, set x->yes
     if( covarList[0] ) {
       //if( x->no != NULL) x->cacheIndex = ++(*cacheIndex); 
       x->yes = createCovarTree( x->yes, covarList+1, covarListLength-1, varIndex, covarIndex+1,cacheIndex );
+    // otherwise set x->no
     } else {
       //if( x->yes != NULL) x->cacheIndex = ++(*cacheIndex); 
       x->no = createCovarTree( x->no, covarList+1, covarListLength-1, varIndex, covarIndex+1, cacheIndex );
     }
 
+  // if covar list length = 0
   } else { 
   // add on variables 
     
@@ -41,7 +67,7 @@ covarTreePtr createCovarTree(
     if( x == NULL ) {
       //printf("Allocating %d\n", covarListLength);
       x = malloc( sizeof( covarTree ) );
-      x->index = -1;        // covariate index 
+      x->index = -1;                  // covariate index 
       x->cacheIndex = 0;              // location in cache array 
       x->varList = NULL;              // list of variables  
       x->varListLength = 0;           // length of the list of variables

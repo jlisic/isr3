@@ -30,24 +30,9 @@ void printFullMatrix ( double * x, int n, int m ) {
 }
 
 
-/* copy matrix function */
-void printFullMatrixBool ( bool * x, int n, int m ) {
-  int i, j;
-
-  for( i = 0; i < m; i++) printf("%d\t", i); 
-  printf("\n");
-  
-  for( i = 0; i < n; i++) {
-    for( j = 0; j < m; j++) {
-      printf("%s, ", x[m*i + j] ? "T":"F");
-    }
-    printf("\n");
-  }
-  return;
-}
 
 
-/* copy covar matrix function */
+/* print covar matrix function */
 void printCovarMatrix ( double * x,  int n ) {
   int i, j, m;
   m = 0;
@@ -314,6 +299,24 @@ void copyMatrixFromLowerTriangularArray(double * X, double * Y, int n) {
 }
 
 
+/* get the index from an upper triangular square matrix form a row and columns 
+ * r - row (starting at 0)
+ * c - column (starting at 0)
+ * n - dim of square matrix
+ * */
+static inline int rc2ut( int row, int col, int n) {
+
+  int tmp;
+
+  if( col < row ){
+    tmp =  col;
+    col = row;
+    row = tmp;
+  } 
+
+  return( n * row - row*(row - 1)/ 2 + col - row );   
+}
+
 
 
 /* save Parameters */
@@ -323,70 +326,48 @@ void saveParameterEstimates(
     int i,             // index from index to save estimate 
     int * index, 
     double * estimates,
-    bool * M,
+    int * M,
     int df 
     ) {
 
-  int j,l,m,o,p,v;
+  int j,o,p,u;
+  int v = 0;
+  int m = 0;
+  int l = 0;
   
   //int n = (k*(k+1))/2; // dim for lower diagonal including diagonal
   double * sample; 
   double * mean;
   double * var;
   double conditionalVar;
-  
+  int * usedColumn; 
 
-  /*
-   *    0
-   *    1  6  
-   *    2  7 11 
-   *    3  8 12 15
-   *    4  9 13 16 18
-   *    5 10 14 17 19 20
-   *
-   *    move along row i:
-   *    row i, col 0:  c =  i 
-   *    row i, col 1:  c += k - 1   
-   *    row i, col 2:  c += k - 2 
-   *    row i, col 3:  c += k - 3 
-   *    row i, col 4:  c += k - 4 
-   *    row i, col 5:  c += k - 5 
-   *    ...
-   *    row i, col j:  c += k - j 
-   *
-   *    move along diag
-   *    diag 0: 0
-   *    diag 1: c+= k 
-   *    diag 2: c+= k - 1 
-   *    diag 3: c+= k - 2 
-   *    diag 4: c+= k - 3
-   *    diag 5: c+= k - 4 
-   *    ...
-   *    diag j = c+= k - j + 1
-   */
   if( M != NULL ) { 
+
+    usedColumn = calloc( i+1, sizeof( int ) );
     
     // figure out how many covariates there are 
-    for(j=0,m=0; j < i; j++) if( M[k*index[i]+j] ) m++; 
+    for(j=0; j < i; j++) {
+      if( M[k*index[i]+j] ) {
+        usedColumn[m] = j;  
+        m++;
+      }
+    }
+
     var = calloc( sizeof( double ), (m*(m+1))/2 );
     mean  = calloc( sizeof( double ), m);
     sample = calloc( sizeof( double ), m);
-   
+
     //conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
     conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m); 
-    
-    // copy over the mean & var 
-    l = i; o = 0; m = 0; v = 0;
-    for(j=0;j<i;j++){
-      
-      if( M[k*index[i]+j] ) {
-        mean[m++]=V[l]; // write mean to Model if the term isn't missing 
-        for(p=o;p < l;p++) var[v++] = conditionalVar * V[p];  
+
+    for(j=0; j < m; j++){
+      o = usedColumn[j];
+      mean[l++] = V[ rc2ut(o,i,k) ];
+      for(p=j; p < m; p++) {
+        u = usedColumn[p];
+        var[v++] = conditionalVar * V[ rc2ut(o,u,k) ]; 
       }
-      
-      l += k - j - 1;       // move between columns in lower triangual array for row i 
-      o += k - j ;   // move along diag on lower triangual array for row i 
-      
     }
 
     // generate a deviate 
@@ -397,6 +378,7 @@ void saveParameterEstimates(
     for(j=0,m=0; j<i; j++) if( M[k*index[i] +j] ) estimates[(k+1)*index[i] + j] = sample[m++]; 
     estimates[(k+1)*index[i] +k] = -1.0 * conditionalVar; 
 
+    free(usedColumn);
     free(sample);
     free(mean);
     free(var);
@@ -515,7 +497,7 @@ void sweepTree(
     double ** matrixCache, 
     int * index,
     double * estimates,
-    bool * M,
+    int * M,
     int n 
   ) {
 
@@ -574,7 +556,6 @@ void sweepTree(
 }
 
 
-// question to jon of programming past, what is est
 
 /* R interface */
 void RSweepTree( 
@@ -594,43 +575,24 @@ void RSweepTree(
   int i,j;
   int cacheSize;
   double ** cache;
-  bool * MBool;        //array to convert int from R to boolean
 
   int p = * pPtr;
   int m = * mPtr;
   cacheSize = 0;
 
-//debug
-printCovarMatrix(x,p);
-
-  // fix an annoying R interface issue, e.g. .C does not support logical to boolean
-  MBool = calloc( sizeof( bool *), p);
-  for(j=0;j<p;j++) MBool[j] = (bool) M[j];
-
-printf("M:\n");
-for(j=0;j<p;j++) printf("%s ", MBool[j] ? "T" : "F");
-printf("\n");
 
   // create tree
-  myTree = createCovarTree( NULL, MBool, p, regIndex[0], 0, &cacheSize); 
+  myTree = createCovarTree( NULL, M, p, regIndex[0], 0, &cacheSize); 
   for(i=1;i<m;i++) {
-    for(j=0;j<p;j++) MBool[j] = (bool) M[i*p + j];
-  
-for(j=0;j<p;j++) printf("%s ", MBool[j] ? "T" : "F");
-printf("\n");
-    
-    myTree = createCovarTree(myTree, MBool, p, regIndex[i], 0, &cacheSize); 
+    myTree = createCovarTree(myTree, &(M[i*p]), p, regIndex[i], 0, &cacheSize); 
   }
-
-  printCovarTree(myTree);
 
   // allocate space for the cache
   cache = calloc( sizeof(double *) , cacheSize+1 );
 
   // estimate parameters for model through tree
-  sweepTree(myTree, x, p, cache, index, est, MBool,*n);
+  sweepTree(myTree, x, p, cache, index, est, M,*n);
 
-  free(MBool);
   free(cache);
   deleteCovarTree(myTree);
 
@@ -645,7 +607,7 @@ printf("\n");
 int main( void ) {
 
   covarTreePtr myTree = NULL;
-  bool * covarList = calloc(sizeof(bool), 5 );
+  int * covarList = calloc(5, sizeof(int));
   int i;
   int cacheSize;
   double ** cache;
@@ -669,16 +631,16 @@ int main( void ) {
   cacheSize = 0;
 
 
-  for( i=0; i < 3; i++) covarList[i] = i % 2 == 0 ? true : false; 
-  covarList[3] = false;
-  covarList[4] = false;
+  for( i=0; i < 3; i++) covarList[i] = i % 2 == 0 ? 1 : 0; 
+  covarList[3] = 0;
+  covarList[4] = 0;
   //for( i=0; i < 5; i++) printf("covarList[%d] = %d\n", i , (int) covarList[i]);
 
   myTree = createCovarTree( NULL, covarList, n, 3,  0, &cacheSize); 
 
 
-  for( i=0; i < 4; i++) covarList[i] = true; 
-  covarList[4] = false;
+  for( i=0; i < 4; i++) covarList[i] = 1; 
+  covarList[4] = 0;
 
   //for( i=0; i < 5; i++) printf("covarList[%d] = %d\n", i , (int) covarList[i]);
 

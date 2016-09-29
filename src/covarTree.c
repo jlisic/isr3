@@ -28,7 +28,7 @@
  */
 covarTreePtr createCovarTree( 
     covarTreePtr x,      // root node of tree
-    bool * covarList,    // array of inclusion and excusion of covariates
+    int * covarList,    // array of inclusion and excusion of covariates
     int covarListLength, // number of covariates 
     int varIndex,        // varIndex to store
     int covarIndex,      // covar starting point usually 0

@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <math.h>
 #include <R_ext/Utils.h>
 #include <R.h>
@@ -57,14 +56,15 @@ void RVRevSWP(
   int * n 
 ); 
 
+/* function to get index from upper triangular matrix using row and col */
+static inline int rc2ut( int row, int col, int n); 
+
 /* diagnostic functions */
 void printFullMatrix ( double * x, int n, int m );
 
 void printCovarMatrix ( double * x, int k );
 
 void copyCovarMatrix ( double * x, double * y, int k ); 
-
-void printFullMatrixBool ( bool * x, int n, int m ); 
 
 /* function to copy the contents from a triangular array X to a  matrix Y */
 void copyMatrixFromLowerTriangularArray(double * X, double * Y, int n); 
@@ -80,12 +80,12 @@ void sweepTree(
     double ** matrixCache, 
     int  *   index,      // identify index with row number e.g. (-1,-1,-1,0,1,2)
     double * estimates ,
-    bool * M,
+    int * M,
     int n
     ); 
 
 /* save parameters */
-void saveParameterEstimates( double * V, int k, int i, int * index, double * estimates, bool * M, int df ); 
+void saveParameterEstimates( double * V, int k, int i, int * index, double * estimates, int * M, int df ); 
 
 /* R interface */
 void RSweepTree( 

@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 /* create a queue ADT */
 struct covarTree { 
@@ -22,7 +21,7 @@ typedef struct covarTree covarTree;
 typedef struct covarTree * covarTreePtr;
 
 /* function to create a new covarTree */
-covarTreePtr createCovarTree( covarTreePtr, bool * , int, int, int, int * );
+covarTreePtr createCovarTree( covarTreePtr, int * , int, int, int, int * );
 
 /* function to delete a covarTree */
 void deleteCovarTree( covarTreePtr x ); 

@@ -78,8 +78,11 @@ rownames(fitMatrix) <- varList
 
 # create tree
 sweep.time <- proc.time()
-E<-  sweepTree(XX,fitMatrix)
+E<-  sweepTree(XX,fitMatrix,df=n)
 print(proc.time() - sweep.time)
+
+print(E)
+
 
 
 ###############################################
@@ -102,10 +105,12 @@ for( i in 1:nrow(fitMatrix) ) {
   fit <- lm( as.formula(a) , data=X.df)
 
   E2[ rownames(fitMatrix)[i], names(fit$coefficients) ] <- fit$coefficients
-  E2[ rownames(fitMatrix)[i], ncol(E) ] <- sum(fit$residuals^2) 
+  E2[ rownames(fitMatrix)[i], ncol(E) ] <- sum(fit$residuals^2)/fit$df.residual 
 
 }
 print(proc.time() - fit.time)
+
+print(E2)
 
 
 print(max(abs(E - E2)))
@@ -114,30 +119,30 @@ print(max(abs(E - E2)))
 ###############################################
 ################  ###################
 ###############################################
-
-betas <- E[,rownames(E)]
-sigmas <- E[,ncol(E)]
-
-#betas <- betas[1:2,1:2]
-#sigmas <- sigmas[1:2]
-
-
-
-fit.time <- proc.time()
-CISR3 <- rebuildCovar( E )
-print(proc.time() - fit.time)
-
-fit.time <- proc.time()
-CISR <- getCovs(betas,sigmas) 
-print(proc.time() - fit.time)
-
-
-a <- c( -0.06745585, 0.09634714 ) 
-B <- matrix( c(
-                186432.64,  67964.87,
-                 67964.87, 196401.92
-                ), byrow=T,nrow=2)
-
+#
+#betas <- E[,rownames(E)]
+#sigmas <- E[,ncol(E)]
+#
+##betas <- betas[1:2,1:2]
+##sigmas <- sigmas[1:2]
+#
+#
+#
+#fit.time <- proc.time()
+#CISR3 <- rebuildCovar( E )
+#print(proc.time() - fit.time)
+#
+#fit.time <- proc.time()
+#CISR <- getCovs(betas,sigmas) 
+#print(proc.time() - fit.time)
+#
+#
+#a <- c( -0.06745585, 0.09634714 ) 
+#B <- matrix( c(
+#                186432.64,  67964.87,
+#                 67964.87, 196401.92
+#                ), byrow=T,nrow=2)
+#
 
 
 

@@ -37,7 +37,7 @@ void RprintMatrixInt( int *x , int n, int m ) {
 }
 
 
-void RprintMatrixBool( bool *x , int n, int m ) {
+void RprintMatrixBool( int *x , int n, int m ) {
 
   int i,j ;
   
@@ -115,7 +115,6 @@ void Risr(
   int b = *bPtr;
   int maxObsIndex = p - b; // maximum observed index
 
-  bool * MBool;      // converts M into boolean for covartree
   double ** cache;   // an array of covariance matricies used in the sweepTree.
 
   double * estRebuild; // a reduced est for the rebuild covar function
@@ -157,15 +156,12 @@ void Risr(
   covarTreePtr myTree = NULL;
 
   // create MBool for the conversion
-  MBool = calloc( sizeof( bool *), p*b);
-  for(j=0;j<p*b;j++) MBool[j] = (bool) M[j];
-
   estRebuild = calloc( sizeof(double), (b+1)*b);
 
   // create tree
   //myTree = createCovarTree( NULL, MBool, p, regIndex[0], 0, &cacheSize); 
   for(i=0;i<b;i++) {
-    myTree = createCovarTree(myTree, &(MBool[i*p]), p, regIndex[i], 0, &cacheSize); 
+    myTree = createCovarTree(myTree, &(M[i*p]), p, regIndex[i], 0, &cacheSize); 
   }
 
   // allocate space for the cache
@@ -174,7 +170,6 @@ void Risr(
   /************* I Step Setup *********/
 
   // identify completely observered rows in X (startup cost )
-  //observed = calloc( sizeof(bool), n );
   
   // allocate our final data 
   Y = calloc( sizeof(double), n );
@@ -225,7 +220,7 @@ void Risr(
     
     copyMatrixToLowerTriangularArray(XX, SA, p); 
     
-    sweepTree(myTree, SA, p, cache, index, est, MBool,n);
+    sweepTree(myTree, SA, p, cache, index, est, M,n);
   
     /****************** Step 3 *******************/
     /* Rebuild covariance                        */
@@ -363,7 +358,6 @@ void Risr(
   PutRNGstate();
 
   /* P Step */
-  free(MBool);
   free(cache);
   deleteCovarTree(myTree);
  

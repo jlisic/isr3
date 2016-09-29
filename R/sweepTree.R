@@ -7,7 +7,7 @@
 #' @param V A symmetric matrix to be swept; this matrix cannot contain missing
 #'   data or infinite values.
 #' @param M A logical matrix used to detmine sweep order.
-#' @param n WHO KNOWS
+#' @param df degrees of freedom for sweep tree.
 #' @return WHO KNOWS
 #' @details WHO KNOWS  
 #' @examples 
@@ -16,8 +16,7 @@
 #' @export
 
 
-#SWP
-sweepTree <- function( V, M,n=0 ) {
+sweepTree <- function( V, M,df=NCOL(V) ) {
 
   # check V properties
   p <- dim(V)
@@ -49,13 +48,13 @@ sweepTree <- function( V, M,n=0 ) {
   mapIndex[regIndex] <- 1:length(regIndex) 
   
   
-  print("regIndex") 
-  print(regIndex-1) 
-  
-  print("mapIndex") 
-  print(mapIndex-1) 
-
-  print(M)
+#  print("regIndex") 
+#  print(regIndex-1) 
+#  
+#  print("mapIndex") 
+#  print(mapIndex-1) 
+#
+#  print(M)
   
   r.result <- .C("RSweepTree",
     as.double(V[lower.tri(V,T)]), 
@@ -69,7 +68,6 @@ sweepTree <- function( V, M,n=0 ) {
   )
 
   E <- matrix( r.result[[4]] ,ncol=p[1]+1,byrow=T) 
-  #E <- E[regIndex,]
   E <- E * cbind(M,1)
 
   return(E) 

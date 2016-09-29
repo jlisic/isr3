@@ -65,21 +65,37 @@
 isr <- function(X, M, mcmcIter=100, sampleRate=20, intercept=T) {
   
   # get missing values in X observed
-  Xobserved <- !is.na(X)  
+  Xobserved <- !is.na(X)
+
+  # initial impute via column means
+  Xbar <- colMeans(X,na.rm=T) 
+  X[!Xobserved] <- matrix( rep(Xbar,nrow(X)), byrow=T,ncol=length(Xbar))[!Xobserved]  
+
+  # check if X is a matrix
+  if( !is.matrix(X) ) stop("X is not a matrix.")
+  
+  # create colnames if they don't exist
+  if( is.null(colnames(X)) )  colnames(X) <- sprintf("X%d",1:ncol(X))
 
   # handle missing M
   if(missing(M)) {
     M <- matrix(T,nrow=ncol(X),ncol=ncol(X)) 
-    colnames(M) <- colnames(X)
-    rownames(M) <- colnames(X)
-  }
+    M[upper.tri(M,T)] <- 0
+    colnames(M) <- colnames(X) 
+    rownames(M) <- colnames(X) 
+  } 
+  
+  # check if M is a matrix
+  if( !is.matrix(M) ) stop("M is not a matrix.")
 
-  # add covariates to M
-  if( sum(colnames(X) %in% colnames(M)) != ncol(X)  ) {
+  # check if rownames for M are in X
+  if( sum(rownames(M) %in% colnames(X)) != nrow(M) ) stop("Some row names in M are not column names in X.")
 
-  }
+  # check if colnames in X and M match 
+  if( sum(colnames(X) %in% colnames(M)) != ncol(X) ) stop(sprintf("Column names between X and M do not match, %d != %d.", sum(colnames(X) %in% colnames(M), ncol(X) ))) 
 
-  # check for missingness in covariates
+  # ensure the diagonal is false
+  diag(M) <- F
 
 
   # handle intercept
@@ -130,15 +146,15 @@ isr <- function(X, M, mcmcIter=100, sampleRate=20, intercept=T) {
   # mapIndex <- -1, -1, -1, 0, 1 2
 
   r.result <- .C("Risr",
-    as.double( c(X) ),        # 1
-    as.integer(c(Xobserved)), # 2
-    as.integer(c(t(M))),      # 3
-    as.integer(regIndex -1),  # 4
-    as.integer(mapIndex -1),  # 5
-    as.integer(n),            # 6
-    as.integer(p),            # 7
-    as.integer(b),            # 8
-    as.double(c(S)),          # 9
+    as.double( c(X) ),        #  1
+    as.integer(c(Xobserved)), #  2
+    as.integer(c(t(M))),      #  3
+    as.integer(regIndex -1),  #  4
+    as.integer(mapIndex -1),  #  5
+    as.integer(n),            #  6
+    as.integer(p),            #  7
+    as.integer(b),            #  8
+    as.double(c(S)),          #  9
     as.double(c(est)),        # 10
     as.integer(mcmcIter),     # 11
     as.integer(sampleRate)    # 12

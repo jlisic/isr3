@@ -11,7 +11,7 @@ void RprintMatrixDouble( double *x , int n, int m ) {
 
   for( i = 0; i < n; i++) {
     Rprintf("%d\t",i); 
-    for( j = 0; j < m; j++) Rprintf("%5.2f, ", x[j*n + i]); 
+    for( j = 0; j < m; j++) Rprintf("%10.7f, ", x[j*n + i]); 
     Rprintf("\n");
     }
 
@@ -100,26 +100,25 @@ void Risr(
   int * regIndex,
   int * index,
   int * nPtr,
-  int * pPtr,
+  int * pPtr,       
   int * bPtr,       // the length of beta
   double * S,       // variance of dim p by p [ only returned ] 
   double * est,     // estimate               [ only returned ]
   int * maxIter,    // number of iters
-  int * sampleRate // how often to sample
+  int * sampleRate, // how often to sample
+  int * miPtr       // number of multiple imputations
   ) {
 
   int errorCode;  // lapack error code
   int i,j,k,m;
   int n = *nPtr;  // number of records (observations, observed or not)
-  int p = *pPtr;  // number of variables
-  int b = *bPtr;
-  int maxObsIndex = p - b; // maximum observed index
+  int p = *pPtr;  // number of variables (including intercept)
+  int b = *bPtr;  // number of variables being imputed for
+  int mi = *miPtr;
 
   double ** cache;   // an array of covariance matricies used in the sweepTree.
 
   double * estRebuild; // a reduced est for the rebuild covar function
-
-  int rowIndexI, rowIndexJ;
 
   double alpha = 1.0; // used for fortran BLAS calls
   double beta  = 0.0; // used for fortran BLAS calls
@@ -136,13 +135,9 @@ void Risr(
   double * Y;
 
   double s2; //used to store the variance
-
   int c; // place holder for index in multiplication of an imputation step
-  
   int cacheSize = 0; // used to determine cache size for sweep tree
-
   int one = 1; // used for dgemv call
-
   int iter; // MCMC iter
 
 
@@ -168,7 +163,6 @@ void Risr(
   cache = calloc( sizeof(double *) , cacheSize+1 );
 
   /************* I Step Setup *********/
-
   // identify completely observered rows in X (startup cost )
   
   // allocate our final data 
@@ -189,7 +183,7 @@ void Risr(
   XX = calloc( sizeof(double), p*p);  
 
 
-  for( iter=0; iter < *maxIter; iter++) {
+  for( iter=0; iter < ((*maxIter) + mi * (*sampleRate) ); iter++) {
  
     /****************** Step 1 *******************/
     /* Calculate Beta and sigma of the           */
@@ -221,6 +215,7 @@ void Risr(
     copyMatrixToLowerTriangularArray(XX, SA, p); 
     
     sweepTree(myTree, SA, p, cache, index, est, M,n);
+
   
     /****************** Step 3 *******************/
     /* Rebuild covariance                        */
@@ -301,19 +296,23 @@ void Risr(
     /* Get conditional means and variances       */ 
     /****************** Step 6 *******************/
     // (x - XB)(Sigma.inv_{ii} - Sigma.inv_{-1,-1} 
+
   
     // create offsets 
     X_tmp = &(X[n*(p-b)]);
     XB_tmp = &(XB[n*(p-b)]);
     MIndicator_tmp = &(MIndicator[n*(p-b)]);
+    
    
     for( i = 0; i < b; i++) {
       // make a copy of SA
       for( j = 0; j < (b*(b+1))/2; j++) SA_tmp[j] = SA[j];
       
+      // calculate variance for conditional distribution 
       VRevSWP( SA_tmp, i, b); 
   
       /*********************************************
+       * example indexing for SA_tmp
        * 0 
        * 1  5 
        * 2  6  9
@@ -322,32 +321,43 @@ void Risr(
        ********************************************/
   
       /* there is probably a better way to rewrite this */ 
-  
       s2 = sqrt( -1 * SA_tmp[i*b - (i*(i-1))/2]);
-  
-      for(k=1; k <n; k++) 
-        if(MIndicator_tmp[i*n+k] == 0) X_tmp[i*n+k] = XB_tmp[i*n+k] + norm_rand() * s2;
-      
+ 
+      // write XB + e to column i of X_tmp for missing values. 
+      for(k=0; k <n; k++) 
+        if(MIndicator_tmp[i*n+k] == 0) 
+          X_tmp[i*n+k] = XB_tmp[i*n+k] + norm_rand() * s2;
+        
+     
+      // add (X - XB) * invSigma[notX,x] to X_tmp 
       c = i;
       for(j=0; j <i; j++, c += b - j) {
         s2 = SA_tmp[c];
-        for(k=1; k <n; k++) 
-          if(MIndicator_tmp[i*n+k] == 0) X_tmp[i*n+k] += (X_tmp[j*n +k] - XB_tmp[j*n +k]) * s2; 
+        for(k=0; k <n; k++) 
+          if(MIndicator_tmp[i*n+k] == 0) 
+            X_tmp[i*n+k] += (X_tmp[j*n +k] - XB_tmp[j*n +k]) * s2; 
+          
       }
       for(j=i+1; j <b; j++) { 
         c++; 
         s2 = SA_tmp[c];
         for(k=0; k <n; k++) 
-          if(MIndicator_tmp[i*n+k] == 0) X_tmp[i*n+k] += (X_tmp[j*n +k] - XB_tmp[j*n +k]) * s2;  
+          if(MIndicator_tmp[i*n+k] == 0) 
+            X_tmp[i*n+k] += (X_tmp[j*n +k] - XB_tmp[j*n +k]) * s2;  
+          
       }
-    
-  
     }
 
+//    Rprintf("X_tmp %d\n",iter);
+//    RprintMatrixDouble( X_tmp , n, b ); 
+
     // save result
-    if( iter % (*sampleRate) == 0) {
-      for(i=0;i<n*b;i++) S[i] = X_tmp[i];
-      S = &(S[n*b]);
+    if( iter >= *maxIter) { 
+      if( (iter - *maxIter) % (*sampleRate) == 0) {
+        printf("iter = %d\n", iter);
+        for(i=0;i<n*b;i++) S[i] = X_tmp[i];
+        S = &(S[n*b]);
+      }
     }
   }
     
@@ -367,7 +377,6 @@ void Risr(
   free(XB);
   free(Beta);
   free(Y);
-  //free(observed);
 
   /* General */
   free(XX);

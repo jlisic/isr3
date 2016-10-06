@@ -243,9 +243,12 @@ void VRevSWP(
 void RVSWP(
   double * v,
   int * i,
-  int * n 
+  int * n,
+  int * p 
 ) {
-  VSWP(v, *i, *n); 
+  int j;
+  for(j=0;j<*p;j++)
+    VSWP(v, i[j], *n); 
   return;
 }
 
@@ -256,9 +259,12 @@ void RVSWP(
 void RVRevSWP(
   double * v,
   int * i,
-  int * n 
+  int * n,
+  int * p 
 ) {
-  VRevSWP(v, *i, *n); 
+  int j;
+  for(j=0;j<*p;j++)
+    VRevSWP(v, i[j], *n); 
   return;
 }
 
@@ -304,7 +310,7 @@ void copyMatrixFromLowerTriangularArray(double * X, double * Y, int n) {
  * c - column (starting at 0)
  * n - dim of square matrix
  * */
-static inline int rc2ut( int row, int col, int n) {
+int rc2ut( int row, int col, int n) {
 
   int tmp;
 
@@ -334,7 +340,7 @@ void saveParameterEstimates(
   int v = 0;
   int m = 0;
   int l = 0;
-  
+
   //int n = (k*(k+1))/2; // dim for lower diagonal including diagonal
   double * sample; 
   double * mean;
@@ -358,12 +364,13 @@ void saveParameterEstimates(
     mean  = calloc( sizeof( double ), m);
     sample = calloc( sizeof( double ), m);
 
-    //conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
-    conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m); 
+    conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
+    //conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m);
 
     for(j=0; j < m; j++){
       o = usedColumn[j];
       mean[l++] = V[ rc2ut(o,i,k) ];
+
       for(p=j; p < m; p++) {
         u = usedColumn[p];
         var[v++] = conditionalVar * V[ rc2ut(o,u,k) ]; 
@@ -371,8 +378,8 @@ void saveParameterEstimates(
     }
 
     // generate a deviate 
-    //ArMVN( sample, mean, var, j);
-    for(j=0;j<m;j++) sample[j] = mean[j];
+    ArMVN( sample, mean, var, j);
+    //for(j=0;j<m;j++) sample[j] = mean[j];
  
     // write results to estimates 
     for(j=0,m=0; j<i; j++) if( M[k*index[i] +j] ) estimates[(k+1)*index[i] + j] = sample[m++]; 
@@ -509,7 +516,6 @@ void sweepTree(
   // this is where we write it out 
   if( x->varList != NULL) {
     for( i = 0; i < x->varListLength; i++) {
-      //printf("Variable = %d\n", x->varList[i] );
       saveParameterEstimates(V, k, x->varList[i], index, estimates,M,n);
     }
     return;
@@ -526,24 +532,23 @@ void sweepTree(
   if( (x->yes != NULL) & (x->no != NULL) ) {
     matrixCache[x->cacheIndex] = calloc( sizeof(double), (k*(k+1))/2 );
     copyCovarMatrix(matrixCache[x->cacheIndex],V,k);
-    //printCovarMatrix(matrixCache[x->cacheIndex],k);
   }
 
-  // sweep to the left (yes)
-  if( x->yes != NULL) {
-    VSWP(V,x->index,k);
-    //printCovarMatrix(V,k);
-    // move to the yes
-    sweepTree(x->yes,V,k,matrixCache,index,estimates,M,n);
-  }
-
-  // don't sweep to the right (no)
+  // sweep to the left (no)
   if( x->no != NULL) {
-    // get matrixCache if x->yes is not null
-    if( x->yes != NULL) copyCovarMatrix(V,matrixCache[x->cacheIndex],k);
-
-    // move to the no 
     sweepTree(x->no,V,k,matrixCache,index,estimates,M,n);
+  }
+
+  // don't sweep to the right (yes)
+  if( x->yes != NULL) {
+    // get matrixCache if x->no is not null
+    if( x->no != NULL) copyCovarMatrix(V,matrixCache[x->cacheIndex],k);
+   
+    // sweep 
+    VSWP(V,x->index,k);
+
+    // move to the yes 
+    sweepTree(x->yes,V,k,matrixCache,index,estimates,M,n);
 
     // free the matrixCache 
     if( matrixCache[x->cacheIndex] != NULL ) {
@@ -572,7 +577,7 @@ void RSweepTree(
 
 
   covarTreePtr myTree = NULL;
-  int i,j;
+  int i;
   int cacheSize;
   double ** cache;
 

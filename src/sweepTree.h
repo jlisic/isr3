@@ -38,7 +38,8 @@ void VRevSWP(
 void RVSWP(
   double * v,
   int * i,
-  int * n 
+  int * n, 
+  int * p  // length of i
 );
 
 /* R interface for RMVN2 */
@@ -53,11 +54,12 @@ void RMVN2(
 void RVRevSWP(
   double * v,
   int * i,
-  int * n 
+  int * n, 
+  int * p  // length of i
 ); 
 
 /* function to get index from upper triangular matrix using row and col */
-static inline int rc2ut( int row, int col, int n); 
+int rc2ut( int row, int col, int n); 
 
 /* diagnostic functions */
 void printFullMatrix ( double * x, int n, int m );

@@ -31,7 +31,8 @@ SWP <- function( V, b ) {
   r.result <- .C("RVSWP",
     as.double(V[lower.tri(V,T)]), 
     as.integer(b-1), 
-    as.integer(p)
+    as.integer(p),
+    as.integer(length(b))
   )
       
   V[lower.tri(V,T)] <- r.result[[1]] 
@@ -66,7 +67,7 @@ SWP <- function( V, b ) {
 #' Dempster, A.P. (1969). \emph{Elements of continuous multivariate analysis}. Reading, MA: Addison-Wesley.
 RSWP <- function( V, b ) {
 
-  if( is.character(b)[2] ) b <- sapply(b, match,colnames(V) )
+  if( is.character(b)[1] ) b <- sapply(b, match,colnames(V) )
   if(length(b) < 1) stop(sprintf('no column selected')) 
 
   p <- dim(V)
@@ -77,7 +78,8 @@ RSWP <- function( V, b ) {
   r.result <- .C("RVRevSWP",
     as.double(V[lower.tri(V,T)]), 
     as.integer(b -1), 
-    as.integer(p)
+    as.integer(p),
+    as.integer(length(b))
   )
            
   V[lower.tri(V,T)] <- r.result[[1]] 

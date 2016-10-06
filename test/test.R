@@ -105,7 +105,7 @@ for( i in 1:nrow(fitMatrix) ) {
   fit <- lm( as.formula(a) , data=X.df)
 
   E2[ rownames(fitMatrix)[i], names(fit$coefficients) ] <- fit$coefficients
-  E2[ rownames(fitMatrix)[i], ncol(E) ] <- sum(fit$residuals^2)/fit$df.residual 
+  E2[ rownames(fitMatrix)[i], ncol(E) ] <- sum(fit$residuals^2)/(fit$df.residual) 
 
 }
 print(proc.time() - fit.time)

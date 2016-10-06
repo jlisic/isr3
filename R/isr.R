@@ -13,10 +13,20 @@
 #'   matrix is used to identify relationships, relationships between the 
 #'   variable and itself are also ignored.  If missing, dependence is assumed
 #'   between all variables.
-#' @param mcmcIter A scalar indicating the number of iterations to run.
-#' @param sampleRate  A scalar that provides thinning for the MCMC routine.
+#' @param Xinit A matrix with the same dimensions of X, with no missing values.
+#'   All values of Xinit should match those of X, with the exception of missing
+#'   values.  Values of Xinit that share an index with a missing value in X are
+#'   treated as initial imputations.
+#' @param mi A scalar indicating the number of imputations to return 
+#' @param burnIn A scalar indicating the number of iterations to burn in before
+#'   returning imputations..
+#' @param thinning  A scalar that provides thinning for the MCMC routine.
 #' @param intercept A logical value identifying if the imputation model should 
 #'   have an intercept.
+#' @return This function returns a list with two elements: \code{param} a list
+#'   of conditional parameters that identify the full conditional specification.
+#'   \code{imputed} a three dimensional array with the last dimesion is an 
+#'   index for the imputations. 
 #'
 #' @examples 
 #' set.seed(100)
@@ -62,14 +72,21 @@
 #' Robbins, M. W., & White, T. K. (2011). Farm commodity payments and imputation in the Agricultural Resource Management Survey. American journal of agricultural economics, DOI: 10.1093/ajae/aaq166.
 #'
 
-isr <- function(X, M, mcmcIter=100, sampleRate=20, intercept=T) {
+isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
   
   # get missing values in X observed
   Xobserved <- !is.na(X)
 
+  # ensure mi is an integer
+  mi <- as.integer(mi)
+
   # initial impute via column means
-  Xbar <- colMeans(X,na.rm=T) 
-  X[!Xobserved] <- matrix( rep(Xbar,nrow(X)), byrow=T,ncol=length(Xbar))[!Xobserved]  
+  if( missing(Xinit) ) {
+    Xbar <- colMeans(X,na.rm=T) 
+    X[!Xobserved] <- matrix( rep(Xbar,nrow(X)), byrow=T,ncol=length(Xbar))[!Xobserved]  
+  } else {
+    X <- Xinit
+  }
 
   # check if X is a matrix
   if( !is.matrix(X) ) stop("X is not a matrix.")
@@ -119,7 +136,7 @@ isr <- function(X, M, mcmcIter=100, sampleRate=20, intercept=T) {
 
   # saved results
   est <- matrix(0,b,p+1) 
-  S <- rep( 0, n*b* ceiling(mcmcIter/sampleRate) )  
+  S <- rep( 0, n*b*mi )  
 
   if( p != ncol(M) ) stop(sprintf('incompatable dimensions between X and M'))
   
@@ -133,7 +150,7 @@ isr <- function(X, M, mcmcIter=100, sampleRate=20, intercept=T) {
   # create a reverse mapping
   mapIndex <- rep(0,p)
   mapIndex[regIndex] <- 1:length(regIndex) 
-  
+ 
   # Useful example 
   #
   # M:
@@ -156,13 +173,22 @@ isr <- function(X, M, mcmcIter=100, sampleRate=20, intercept=T) {
     as.integer(b),            #  8
     as.double(c(S)),          #  9
     as.double(c(est)),        # 10
-    as.integer(mcmcIter),     # 11
-    as.integer(sampleRate)    # 12
+    as.integer(burnIn),       # 11
+    as.integer(thinning),     # 12
+    as.integer(mi)
   )
 
   E <- matrix( r.result[[1]], nrow=n)
   colnames(E) <- colnames(M) 
-  S <- matrix( r.result[[9]], nrow=n*ceiling(mcmcIter/sampleRate) )  
+  S <- matrix( r.result[[9]], nrow=n*mi )  
+
+
+  # need to do something to fix this for with and without intercept
+  if( intercept ) {
+    S <- array( S,dim=c(n,NCOL(S),iter), list(c(), colnames(M)[-1],c() ) ) 
+  } else {
+    S <- array( S,dim=c(n,NCOL(S),iter), list(c(), colnames(M), c() ) ) 
+  }
 
   return( list( X=E, imputed=S) )
 }

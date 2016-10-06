@@ -63,7 +63,7 @@
 #' colnames(fitMatrix) <- covarList 
 #' rownames(fitMatrix) <- varList 
 #' 
-#' E<-  isr(X,fitMatrix,mcmcIter=mcmciter)
+#' E<-  isr(X,fitMatrix)
 #'
 #' @useDynLib ISR3
 #' @export
@@ -79,6 +79,7 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
 
   # ensure mi is an integer
   mi <- as.integer(mi)
+  if( mi < 1 ) stop("mi must be larger than 0.")
 
   # initial impute via column means
   if( missing(Xinit) ) {
@@ -135,8 +136,13 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
   b <- nrow(M)
 
   # saved results
-  est <- matrix(0,b,p+1) 
-  S <- rep( 0, n*b*mi )  
+  est <- rep(0,b*(p+1)*mi)
+  S <- rep( 0, n*b*mi ) 
+
+  print("S size:") 
+  print( n*b*mi)
+  print("est size:") 
+  print( b*(p+1)*mi) 
 
   if( p != ncol(M) ) stop(sprintf('incompatable dimensions between X and M'))
   
@@ -171,15 +177,15 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
     as.integer(n),            #  6
     as.integer(p),            #  7
     as.integer(b),            #  8
-    as.double(c(S)),          #  9
-    as.double(c(est)),        # 10
+    as.double(S),          #  9
+    as.double(est),        # 10
     as.integer(burnIn),       # 11
     as.integer(thinning),     # 12
-    as.integer(mi)
+    as.integer(mi)            # 13
   )
 
-  E <- matrix( r.result[[1]], nrow=n)
-  colnames(E) <- colnames(M) 
+  E <- r.result[[10]]
+  #colnames(E) <- colnames(M) 
   S <- matrix( r.result[[9]], nrow=n*mi )  
 
 
@@ -190,7 +196,7 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
     S <- array( S,dim=c(n,NCOL(S),iter), list(c(), colnames(M), c() ) ) 
   }
 
-  return( list( X=E, imputed=S) )
+  return( list( param=E, imputed=S) )
 }
 
 

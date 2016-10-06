@@ -1,8 +1,8 @@
 Package: ISR3 
 Type: Package
 Title: Iterative Sequential Regression 
-Version: 1.00
-Date: 2016-09-28
+Version: 0.98
+Date: 2016-10-28
 Authors@R: c(
     person("Jonathan", "Lisic", , "jonathan.lisic@nass.usda.gov", c("aut", "cre"))
     )

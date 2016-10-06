@@ -1,6 +1,5 @@
 library(ISR3)
-library(isrnass)
-library(MNP)
+#library(isrnass)
 ######################################################################
 # Test Two : rebuild speed test 
 ######################################################################
@@ -12,7 +11,7 @@ set.seed(100)
 n <- 20 
 p <- 5 
 missing <- 20 
-iter <- 2 
+iter <- 5 
 
 # these are dependent variables that we will record model parameters for
 varList <-  sprintf("Var%d",1:p)
@@ -41,37 +40,37 @@ rownames(fitMatrix) <- varList
 X[sample(1:(n*p),size=missing)] <- NA
 
 
-######## BUILD INPUTS FOR NASSISR ############
-obs <- !is.na(X)
-dat.tmp <- X
-Xbar <- colMeans(X,na.rm=T) 
-dat.tmp[!obs] <- matrix( rep(Xbar,nrow(X)), byrow=T,ncol=length(Xbar))[!obs]  
-
-# get the ordering etc...
-ord <- 1:5 
-badcovar <- c()
-intersects <- c()
-grps <- c()
-
-# create an index
-index <- cbind(
-               1:5,          # orig. col. index
-               rep(2,5),    # missingness
-               rep(1,5),     # variable type
-               rep(1,5),          # transformation type
-               rep(-1,5),    # category
-               rep(0,5)      # group
-              )
-
-rownames( index ) <- varList 
-colnames(index) <- c(
-  'Column Number',
-  'Missingness Indicator',
-  'Variable Type',
-  'Transformation Type',
-  'Category',
-  'Group Indicator'
-)
+######### BUILD INPUTS FOR NASSISR ############
+#obs <- !is.na(X)
+#dat.tmp <- X
+#Xbar <- colMeans(X,na.rm=T) 
+#dat.tmp[!obs] <- matrix( rep(Xbar,nrow(X)), byrow=T,ncol=length(Xbar))[!obs]  
+#
+## get the ordering etc...
+#ord <- 1:5 
+#badcovar <- c()
+#intersects <- c()
+#grps <- c()
+#
+## create an index
+#index <- cbind(
+#               1:5,          # orig. col. index
+#               rep(2,5),    # missingness
+#               rep(1,5),     # variable type
+#               rep(1,5),          # transformation type
+#               rep(-1,5),    # category
+#               rep(0,5)      # group
+#              )
+#
+#rownames( index ) <- varList 
+#colnames(index) <- c(
+#  'Column Number',
+#  'Missingness Indicator',
+#  'Variable Type',
+#  'Transformation Type',
+#  'Category',
+#  'Group Indicator'
+#)
 
 
 
@@ -79,37 +78,37 @@ colnames(index) <- c(
 set.seed(100)
 start.time <- proc.time()
 isr.out <- isr(X, fitMatrix,mi=iter, burnIn=10,thinning=10,intercept=T)
-print( start.time - proc.time() )
+print( proc.time() - start.time )
 
 
-### PStep2 ###
-set.seed(100)
-start.time <- proc.time()
-for( i in 1:iter) {
-params=PStep2(
-  dat=dat.tmp,
-  index=index,
-  ord=ord,
-  badcovar=badcovar,
-  intersects=intersects,
-  grps=grps,
-  method="chol"
-)
-
-### IStep ###
-imputes=IStep(
-  dat.tmp,
-  obs,
-  params,
-  n=nrow(dat.tmp),
-  p1=ncol(dat.tmp),
-  mis=ord,
-  p=length(ord)
-  )
-
-  dat.tmp <- imputes[[1]]
-}
-print( start.time - proc.time() )
+#### PStep2 ###
+#set.seed(100)
+#start.time <- proc.time()
+#for( i in 1:iter) {
+#params=PStep2(
+#  dat=dat.tmp,
+#  index=index,
+#  ord=ord,
+#  badcovar=badcovar,
+#  intersects=intersects,
+#  grps=grps,
+#  method="chol"
+#)
+#
+#### IStep ###
+#imputes=IStep(
+#  dat.tmp,
+#  obs,
+#  params,
+#  n=nrow(dat.tmp),
+#  p1=ncol(dat.tmp),
+#  mis=ord,
+#  p=length(ord)
+#  )
+#
+#  dat.tmp <- imputes[[1]]
+#}
+#print( proc.time() - start.time )
 
 
 

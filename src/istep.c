@@ -102,8 +102,8 @@ void Risr(
   int * nPtr,
   int * pPtr,       
   int * bPtr,       // the length of beta
-  double * S,       // variance of dim p by p [ only returned ] 
-  double * est,     // estimate               [ only returned ]
+  double * S,       // imputations [ only returned ] 
+  double * est,     // parameters [ only returned ]
   int * maxIter,    // number of iters
   int * sampleRate, // how often to sample
   int * miPtr       // number of multiple imputations
@@ -139,7 +139,12 @@ void Risr(
   int cacheSize = 0; // used to determine cache size for sweep tree
   int one = 1; // used for dgemv call
   int iter; // MCMC iter
+  
+  // temporary hodlers for output
+  double * est_tmp = est;
+  double * S_tmp = S;
 
+  int tmp = 0;
 
   /****************** Step 0 *******************/
 
@@ -183,7 +188,9 @@ void Risr(
   XX = calloc( sizeof(double), p*p);  
 
 
-  for( iter=0; iter < ((*maxIter) + mi * (*sampleRate) ); iter++) {
+
+  for( iter=0; iter < ((*maxIter) + (mi-1) * (*sampleRate) ); iter++) {
+  printf("S start %d\n", tmp);
  
     /****************** Step 1 *******************/
     /* Calculate Beta and sigma of the           */
@@ -214,7 +221,7 @@ void Risr(
     
     copyMatrixToLowerTriangularArray(XX, SA, p); 
     
-    sweepTree(myTree, SA, p, cache, index, est, M,n);
+    sweepTree(myTree, SA, p, cache, index, est_tmp, M,n);
 
   
     /****************** Step 3 *******************/
@@ -233,7 +240,7 @@ void Risr(
     */ 
   
     for(i=0; i < b; i++) 
-      for(j=0; j <= b; j++) estRebuild[i*(b+1)+j ] = est[i*(p+1)+p-b+j]; 
+      for(j=0; j <= b; j++) estRebuild[i*(b+1)+j ] = est_tmp[i*(p+1)+p-b+j]; 
   
     rebuildCovar( estRebuild, SA, b);
     
@@ -242,7 +249,7 @@ void Risr(
     /****************** Step 4 *******************/
     
     for(i=0; i < b; i++) 
-      for(j=0; j < p ; j++) Beta[i*p+j] = est[i*(p+1) + j]; 
+      for(j=0; j < p ; j++) Beta[i*p+j] = est_tmp[i*(p+1) + j]; 
   
     // missing XBeta values 
     
@@ -352,18 +359,24 @@ void Risr(
 //    RprintMatrixDouble( X_tmp , n, b ); 
 
     // save result
-    if( iter >= *maxIter) { 
-      if( (iter - *maxIter) % (*sampleRate) == 0) {
+    if( iter >= *maxIter-1) { 
+      if( (iter - (*maxIter-1) ) % (*sampleRate) == 0) {
         printf("iter = %d\n", iter);
-        for(i=0;i<n*b;i++) S[i] = X_tmp[i];
-        S = &(S[n*b]);
+        for(i=0;i<n*b;i++) S_tmp[i] = X_tmp[i];
+        S_tmp   = S_tmp + n*b;
+        est_tmp = est_tmp + b*(p+1); 
+        tmp += n*b;
       }
     }
   }
-    
+  printf("done %d\n", tmp);
+   
+  // not really needed, but good practice 
   X_tmp = NULL;
   XB_tmp = NULL;
   MIndicator_tmp = NULL;
+  S_tmp = NULL;
+  est_tmp = NULL;
 
   PutRNGstate();
 

@@ -396,7 +396,7 @@ void saveParameterEstimates(
 
 
 
-/* r interface for ArMVN */
+/* R interface for ArMVN */
 void RMVN2(
     double * sample,
     double * mean,
@@ -404,9 +404,17 @@ void RMVN2(
     int * sizePtr
     ) {
 
-  GetRNGstate();
-  ArMVN(sample, mean, var , *sizePtr); 
-  PutRNGstate();
+  GetRNGstate(); // get seed from R
+  
+  // generate deviate
+  ArMVN(
+    sample, 
+    mean, 
+    var, 
+    *sizePtr
+    ); 
+
+  PutRNGstate(); // set seed
 
   return;
 }

@@ -3,42 +3,36 @@
 #' \code{isr} performs imputation of missing values based on an optionally
 #' specified model.  Missingness is assumed to be missing at random (MAR). 
 #'
-#' @param X A matrix of points to be imputed or used for covariates for the
-#'   by isr.  \code{NA} values are considered missing.  Distinct column names 
-#'   are required for each variable. 
-#' @param M A matrix specifying the relationships between each of the variables.
-#'   Each column name of M must match to the column names of X.  Each row of 
-#'   M identifies a variable that will be imputed for, all other variables are
-#'   treated as covariates for all variables.  Only the lower diagonal of this
-#'   matrix is used to identify relationships, relationships between the 
-#'   variable and itself are also ignored.  If missing, dependence is assumed
-#'   between all variables.
-#' @param Xinit A matrix with the same dimensions of X, with no missing values.
-#'   All values of Xinit should match those of X, with the exception of missing
-#'   values.  Values of Xinit that share an index with a missing value in X are
+#' @param X A matrix of points to be imputed or used for covariates by isr.  
+#'   \code{NA} values are considered missing.  If column names are used, 
+#'   duplicate column names are not allowed. 
+#' @param M An optional matrix specifying the conditional relationships between each of the variables.
+#'   The columns of \code{M} must match the column names of \code{X}.  Each row of 
+#'   \code{M} identifies a variable that will be imputed for, all other variables are
+#'   treated as covariates for all variables.  All relationships are assumed
+#'   to be symmetric, and all relationships between the variable and itself are 
+#'   ignored.  If \code{M} is missing, dependence is assumed between all variables.
+#' @param Xinit An optional matrix with the same dimensions of \code{X}, with no missing values.
+#'   All values of \code{Xinit} should match those of \code{X}, with the exception of missing
+#'   values.  Values of \code{Xinit} that share an index with a missing value in \code{X} are
 #'   treated as initial imputations.
 #' @param mi A scalar indicating the number of imputations to return 
 #' @param burnIn A scalar indicating the number of iterations to burn in before
-#'   returning imputations..
-#' @param thinning  A scalar that provides thinning for the MCMC routine.
+#'   returning imputations.  Note, that burnIn is the total number of iterations, no thinning is performed until multiple imputation generation starts. 
+#' @param thinning  A scalar that represents the amount of thinning for the MCMC routine.  A value of one implies no thinning.
 #' @param intercept A logical value identifying if the imputation model should 
 #'   have an intercept.
-#' @return This function returns a list with two elements: \code{param} a list
-#'   of conditional parameters that identify the full conditional specification.
-#'   \code{imputed} a three dimensional array with the last dimesion is an 
+#' @return This function returns a list with two elements: \code{param} a three dimensional array  
+#'   of conditional parameters that identify the full conditional specification and estimated conditional variances.  The last dimension is an index for the imputations.
+#'   \code{imputed} a three dimensional array with the last dimension is an 
 #'   index for the imputations. 
 #'
 #' @examples 
-#' set.seed(100)
-#' mcmciter <- 100 
-#' 
-#' # these are dependent variables that we will record model parameters for
-#' varList <-  c("Var1", "Var2", "Var3")
-#' 
+
 #' # simulation parameters
 #' set.seed(100)
 #' n <- 30
-#' p <- 5
+#' p <- 5 
 #' 
 #' # generate a covar matrix
 #' covarMatrix <- rWishart(1,p+1,diag(p))[,,1]
@@ -47,23 +41,27 @@
 #' U <- chol(covarMatrix)
 #' 
 #' X <- matrix(rnorm(n*p), nrow=n) %*% U
-#' colnames(X) <- covarList
+#' 
 #' 
 #' # specify relationships
 #' fitMatrix <- matrix( c( 
-#' #             Var1  Var2  Var3
-#' # 1. Var1
-#'                 F,    F,    F,
-#' # 2. Var2
-#'                 T,    F,    F,
-#' # 3. Var3
-#'                 T,    T,    F 
-#' ),nrow=3,byrow=T)
+#' #  Covar2 CoVar1 Var1  Var2  Var3
+#'      # 1. Var1
+#'        T,    T,   F,    F,    F,
+#'      # 2. Var2
+#'        T,    F,   T,    F,    F,
+#'      # 3. Var3
+#'        T,    T,   T,    T,    F 
+#'  ),nrow=3,byrow=T)
 #' 
+#' covarList <- c('Covar2', 'CoVar1', 'Var1', 'Var2','Var3')
+#' 
+#' # setup names
 #' colnames(fitMatrix) <- covarList 
-#' rownames(fitMatrix) <- varList 
+#' rownames(fitMatrix) <- covarList[-1:-2] 
+#' colnames(X) <- covarList
 #' 
-#' E<-  isr(X,fitMatrix)
+#' XImputed <- isr(X,fitMatrix)
 #'
 #' @useDynLib ISR3
 #' @export
@@ -77,9 +75,18 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
   # get missing values in X observed
   Xobserved <- !is.na(X)
 
-  # ensure mi is an integer
+  # ensure mi is a positive integer
   mi <- as.integer(mi)
   if( mi < 1 ) stop("mi must be larger than 0.")
+  
+  # ensure thinning is a positive integer
+  thinning <- as.integer(thinning)
+  if( thinning < 1 ) stop("thinning must be larger than 0.")
+  
+  # ensure burnIn is an integer
+  burnIn <- as.integer(burnIn)
+  if( burnIn < 0 ) stop("burnIn must be larger than or equal to 0.")
+
 
   # initial impute via column means
   if( missing(Xinit) ) {
@@ -110,11 +117,7 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
   if( sum(rownames(M) %in% colnames(X)) != nrow(M) ) stop("Some row names in M are not column names in X.")
 
   # check if colnames in X and M match 
-  if( sum(colnames(X) %in% colnames(M)) != ncol(X) ) stop(sprintf("Column names between X and M do not match, %d != %d.", sum(colnames(X) %in% colnames(M), ncol(X) ))) 
-
-  # ensure the diagonal is false
-  diag(M) <- F
-
+  if( sum(colnames(X) == colnames(M)) != ncol(X) ) stop(sprintf("Column names between X and M do not match, %d != %d.", sum(colnames(X) %in% colnames(M), ncol(X) ))) 
 
   # handle intercept
   if(intercept) {
@@ -138,11 +141,6 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
   # saved results
   est <- rep(0,b*(p+1)*mi)
   S <- rep( 0, n*b*mi ) 
-
-  print("S size:") 
-  print( n*b*mi)
-  print("est size:") 
-  print( b*(p+1)*mi) 
 
   if( p != ncol(M) ) stop(sprintf('incompatable dimensions between X and M'))
   
@@ -184,16 +182,22 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
     as.integer(mi)            # 13
   )
 
+  result.debug <<- r.result
+
   E <- r.result[[10]]
   #colnames(E) <- colnames(M) 
   S <- matrix( r.result[[9]], nrow=n*mi )  
 
+  E <- array(E,dim=c(ncol(M)+1,nrow(M),mi),
+            list(c(colnames(M),'S2'),rownames(M),c()) ) 
 
   # need to do something to fix this for with and without intercept
   if( intercept ) {
-    S <- array( S,dim=c(n,NCOL(S),iter), list(c(), colnames(M)[-1],c() ) ) 
+    print(c(n,NCOL(S),mi))
+    print(colnames(M)[-1])
+    S <- array( S,dim=c(n,NCOL(S),mi), list(c(), rownames(M),c() ) ) 
   } else {
-    S <- array( S,dim=c(n,NCOL(S),iter), list(c(), colnames(M), c() ) ) 
+    S <- array( S,dim=c(n,NCOL(S),mi), list(c(), rownames(M),c() ) ) 
   }
 
   return( list( param=E, imputed=S) )

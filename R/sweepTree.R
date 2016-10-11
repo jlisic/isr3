@@ -3,17 +3,7 @@
 #' \code{sweepTree} performs multiple sequences of sweep operations. To increase
 #' computational stability no reverse sweeps are performed.  Instead this function
 #' uses a binary tree and caching to reduce computational burden.
-#'
-#' @param V A symmetric matrix to be swept; this matrix cannot contain missing
-#'   data or infinite values.
-#' @param M A logical matrix used to detmine sweep order.
-#' @param df degrees of freedom for sweep tree.
-#' @return WHO KNOWS
-#' @details WHO KNOWS  
-#' @examples 
-#' set.seed(100)
 #' @useDynLib ISR3
-#' @export
 
 
 sweepTree <- function( V, M,df=NCOL(V) ) {

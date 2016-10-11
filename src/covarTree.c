@@ -113,6 +113,7 @@ void deleteCovarTree( covarTreePtr x ) {
 
 
 /* function to print a covarTree */
+/*
 void printCovarTree( covarTreePtr x ) {
 
   if( x == NULL ) return; 
@@ -136,7 +137,7 @@ void printCovarTree( covarTreePtr x ) {
 
   return;
 }
-
+*/
 
 
 

@@ -4,27 +4,40 @@
 \alias{isr}
 \title{Iterative Sequential Regression}
 \usage{
-isr(X, M, mcmcIter = 100, sampleRate = 20, intercept = T)
+isr(X, M, Xinit, mi = 1, burnIn = 100, thinning = 20, intercept = T)
 }
 \arguments{
-\item{X}{A matrix of points to be imputed or used for covariates for the
-by isr.  \code{NA} values are considered missing.  Distinct column names 
-are required for each variable.}
+\item{X}{A matrix of points to be imputed or used for covariates by isr.
+\code{NA} values are considered missing.  If column names are used, 
+duplicate column names are not allowed.}
 
-\item{M}{A matrix specifying the relationships between each of the variables.
-Each column name of M must match to the column names of X.  Each row of 
-M identifies a variable that will be imputed for, all other variables are
-treated as covariates for all variables.  Only the lower diagonal of this
-matrix is used to identify relationships, relationships between the 
-variable and itself are also ignored.  If missing, dependence is assumed
-between all variables.}
+\item{M}{An optional matrix specifying the relationships between each of the variables.
+Each column name of \code{M} must match to a column name in \code{X}.  Each row of 
+\code{M} identifies a variable that will be imputed for, all other variables are
+treated as covariates for all variables.  All relationships are assumed
+to be symmetric, and all relationships between the variable and itself are 
+ignored.  If \code{M} is missing, dependence is assumed between all variables.}
 
-\item{mcmcIter}{A scalar indicating the number of iterations to run.}
+\item{Xinit}{An optional matrix with the same dimensions of \code{X}, with no missing values.
+All values of \code{Xinit} should match those of \code{X}, with the exception of missing
+values.  Values of \code{Xinit} that share an index with a missing value in \code{X} are
+treated as initial imputations.}
 
-\item{sampleRate}{A scalar that provides thinning for the MCMC routine.}
+\item{mi}{A scalar indicating the number of imputations to return}
+
+\item{burnIn}{A scalar indicating the number of iterations to burn in before
+returning imputations.  Note, that burnIn is the total number of iterations, no thinning is performed until multiple imputation generation starts.}
+
+\item{thinning}{A scalar that represents the amount of thinning for the MCMC routine.  A value of one implies no thinning.}
 
 \item{intercept}{A logical value identifying if the imputation model should 
 have an intercept.}
+}
+\value{
+This function returns a list with two elements: \code{param} a three dimensional array  
+  of conditional parameters that identify the full conditional specification and estimated conditional variances.  The last dimension is an index for the imputations.
+  \code{imputed} a three dimensional array with the last dimension is an 
+  index for the imputations.
 }
 \description{
 \code{isr} performs imputation of missing values based on an optionally
@@ -34,13 +47,10 @@ specified model.  Missingness is assumed to be missing at random (MAR).
 set.seed(100)
 mcmciter <- 100 
 
-# these are dependent variables that we will record model parameters for
-varList <-  c("Var1", "Var2", "Var3")
-
 # simulation parameters
 set.seed(100)
 n <- 30
-p <- 5
+p <- 4 
 
 # generate a covar matrix
 covarMatrix <- rWishart(1,p+1,diag(p))[,,1]
@@ -53,19 +63,19 @@ colnames(X) <- covarList
 
 # specify relationships
 fitMatrix <- matrix( c( 
-#             Var1  Var2  Var3
+#             Covar2 CoVar1 Var1  Var2  Var3
 # 1. Var1
-                F,    F,    F,
+              T,    T,   F,    F,    F,
 # 2. Var2
-                T,    F,    F,
+              T,    F,   T,    F,    F,
 # 3. Var3
-                T,    T,    F 
+              T,    T,   T,    T,    F 
 ),nrow=3,byrow=T)
 
 colnames(fitMatrix) <- covarList 
-rownames(fitMatrix) <- varList 
+rownames(fitMatrix) <- covarList[-1:-2] 
 
-E<-  isr(X,fitMatrix,mcmcIter=mcmciter)
+E<-  isr(X,fitMatrix)
 
 }
 \references{

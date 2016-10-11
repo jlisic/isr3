@@ -14,6 +14,7 @@ void copyCovarMatrix ( double * x, double * y, int k ) {
 
 
 /* copy matrix function */
+/*
 void printFullMatrix ( double * x, int n, int m ) {
   int i, j;
 
@@ -28,11 +29,12 @@ void printFullMatrix ( double * x, int n, int m ) {
   }
   return;
 }
-
+*/
 
 
 
 /* print covar matrix function */
+/*
 void printCovarMatrix ( double * x,  int n ) {
   int i, j, m;
   m = 0;
@@ -50,7 +52,7 @@ void printCovarMatrix ( double * x,  int n ) {
   }
   return;
 }
-
+*/
 
 
 
@@ -77,7 +79,7 @@ void VSWP(
   }
   
   if( xii < 10e-20 ) {
-    printf("SWP: singular matrix.\n");
+    Rprintf("WARNING: Sweeping singular matrix.\n");
     return;
   }
 
@@ -170,7 +172,7 @@ void VRevSWP(
   }
   
   if( fabs(xii) < 10e-20 ) {
-    printf("SWP: singular matrix.\n");
+    Rprintf("WARNING: Reverse sweeping singular matrix.\n");
     return;
   }
 

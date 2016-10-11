@@ -2,7 +2,5 @@
 
 export(RSWP)
 export(SWP)
-export(RMVN2)
 export(isr)
-export(sweepTree)
 useDynLib(ISR3)

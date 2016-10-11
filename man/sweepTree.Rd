@@ -4,28 +4,11 @@
 \alias{sweepTree}
 \title{Sweep Tree Function}
 \usage{
-sweepTree(V, M, n = 0)
-}
-\arguments{
-\item{V}{A symmetric matrix to be swept; this matrix cannot contain missing
-data or infinite values.}
-
-\item{M}{A logical matrix used to detmine sweep order.}
-
-\item{n}{WHO KNOWS}
-}
-\value{
-WHO KNOWS
+sweepTree(V, M, df = NCOL(V))
 }
 \description{
 \code{sweepTree} performs multiple sequences of sweep operations. To increase
 computational stability no reverse sweeps are performed.  Instead this function
 uses a binary tree and caching to reduce computational burden.
-}
-\details{
-WHO KNOWS
-}
-\examples{
-set.seed(100)
 }
 

@@ -139,6 +139,7 @@ void Risr(
   int cacheSize = 0; // used to determine cache size for sweep tree
   int one = 1; // used for dgemv call
   int iter; // MCMC iter
+  int finIter; // cap for all iterations including thinning and burnin
   
   // temporary hodlers for output
   double * est_tmp = est;
@@ -187,10 +188,14 @@ void Risr(
   // pre allocate X**T X
   XX = calloc( sizeof(double), p*p);  
 
+  // handle thinning 
+  if( mi == 1) {
+    finIter = *maxIter + mi; 
+  } else {
+    finIter = *maxIter + 1 + (mi-1) * (*sampleRate); 
+  }
 
-
-  for( iter=0; iter < ((*maxIter) + (mi-1) * (*sampleRate) ); iter++) {
-  printf("S start %d\n", tmp);
+  for( iter=0; iter < finIter; iter++) {
  
     /****************** Step 1 *******************/
     /* Calculate Beta and sigma of the           */
@@ -359,9 +364,9 @@ void Risr(
 //    RprintMatrixDouble( X_tmp , n, b ); 
 
     // save result
-    if( iter >= *maxIter-1) { 
-      if( (iter - (*maxIter-1) ) % (*sampleRate) == 0) {
-        printf("iter = %d\n", iter);
+    if( iter >= *maxIter) { 
+      if( (iter - (*maxIter) ) % (*sampleRate) == 0) {
+        //printf("iter = %d\n", iter);
         for(i=0;i<n*b;i++) S_tmp[i] = X_tmp[i];
         S_tmp   = S_tmp + n*b;
         est_tmp = est_tmp + b*(p+1); 
@@ -369,7 +374,7 @@ void Risr(
       }
     }
   }
-  printf("done %d\n", tmp);
+  //printf("done %d\n", tmp);
    
   // not really needed, but good practice 
   X_tmp = NULL;

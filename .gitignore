@@ -3,5 +3,8 @@
 *.dylib
 *.swp
 *.swo
-
+*.Rproj
+*.RData
+*.Rhistory
 .Rproj.user
+test

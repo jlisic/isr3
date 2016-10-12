@@ -6,16 +6,17 @@
 #' @param X A matrix of points to be imputed or used for covariates by isr.  
 #'   \code{NA} values are considered missing.  If column names are used, 
 #'   duplicate column names are not allowed. 
-#' @param M An optional matrix specifying the conditional relationships between each of the variables.
-#'   The columns of \code{M} must match the column names of \code{X}.  Each row of 
-#'   \code{M} identifies a variable that will be imputed for, all other variables are
-#'   treated as covariates for all variables.  All relationships are assumed
-#'   to be symmetric, and all relationships between the variable and itself are 
-#'   ignored.  If \code{M} is missing, dependence is assumed between all variables.
+#' @param M A boolean valued optional matrix specifying the factorized pdf of the joint multivariate normal distribution of the variables requiring imputation.
+#'   A description of the factorized pdf is provided in the details.
+#'   The column names of \code{M} must match the column names of \code{X}, and the rows names of \code{M} must be a subset of the column names in \code{X}, in the same order as in \code{X}. 
+#'   Variables requiring imputation are each associated with a row in \code{M}; the conditional relationship to variables in \code{X} is indicated by the boolean valued elements of each row vector.
+#'   A value of \code{TRUE} indicates conditional dependence, likewise a value of \code{FALSE} indicates conditional independence.  
+#'   Because this is a factorized pdf, the variable in the first row of \code{M} cannot specify a conditional dependence with a variable in a later row of \code{M}. 
+#'   If \code{M} is missing, dependence is assumed between all variables being imputed.  No missing values are allowed.
 #' @param Xinit An optional matrix with the same dimensions of \code{X}, with no missing values.
 #'   All values of \code{Xinit} should match those of \code{X}, with the exception of missing
 #'   values.  Values of \code{Xinit} that share an index with a missing value in \code{X} are
-#'   treated as initial imputations.
+#'   treated as initial imputations.  If Xinit is not specified, variable means are used as initial imputations.
 #' @param mi A scalar indicating the number of imputations to return 
 #' @param burnIn A scalar indicating the number of iterations to burn in before
 #'   returning imputations.  Note, that burnIn is the total number of iterations, no thinning is performed until multiple imputation generation starts. 
@@ -23,9 +24,17 @@
 #' @param intercept A logical value identifying if the imputation model should 
 #'   have an intercept.
 #' @return This function returns a list with two elements: \code{param} a three dimensional array  
-#'   of conditional parameters that identify the full conditional specification and estimated conditional variances.  The last dimension is an index for the imputations.
-#'   \code{imputed} a three dimensional array with the last dimension is an 
-#'   index for the imputations. 
+#'   of parameter estimates of the factored pdf.  The last dimension is an index for the multiple imputations.
+#'   \code{imputed} a three dimensional array of \code{X} with imputed values, the last dimension is an 
+#'   index for the multiple imputations. 
+#' @details  The ISR algorithm performs Bayesian multivariate normal imputation.  This imputation follows two steps, an imputation step and a prediction step.
+#'   In the imputation step, the missing values are imputed from a Normal-Inverse-Wishart model with non-informative priors.
+#'   In the prediction step, the parameters are estimated using both the observed and imputed values.
+#'    
+#'   Imputation of parameters are done through the conditional factoring of the joint pdf.
+#'   A conditional factoring is an expansion of the joint pdf of all
+#'   the dependent variables in \code{X}.  e.g. Pr(X|Z) = Pr(X1,X2,X3|Z) = Pr(X1,Z) Pr(X2|X1,Z) Pr(X3|X1,X2,Z),
+#'   where the right hand side is the fully conditional specification for the dependent variables X1-X3 and independent variable Z.
 #'
 #' @examples 
 
@@ -42,17 +51,16 @@
 #' 
 #' X <- matrix(rnorm(n*p), nrow=n) %*% U
 #' 
-#' 
 #' # specify relationships
 #' fitMatrix <- matrix( c( 
-#' #  Covar2 CoVar1 Var1  Var2  Var3
+#'   #  Covar2    CoVar1   Var1     Var2     Var3
 #'      # 1. Var1
-#'        T,    T,   F,    F,    F,
+#'        TRUE,    TRUE,   FALSE,   FALSE,   FALSE,
 #'      # 2. Var2
-#'        T,    F,   T,    F,    F,
+#'        TRUE,    TRUE,   FALSE,    FALSE,   FALSE,
 #'      # 3. Var3
-#'        T,    T,   T,    T,    F 
-#'  ),nrow=3,byrow=T)
+#'        TRUE,    TRUE,   TRUE,    TRUE,    FALSE 
+#'  ),nrow=3,byrow=TRUE)
 #' 
 #' covarList <- c('Covar2', 'CoVar1', 'Var1', 'Var2','Var3')
 #' 
@@ -104,8 +112,8 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
 
   # handle missing M
   if(missing(M)) {
-    M <- matrix(T,nrow=ncol(X),ncol=ncol(X)) 
-    M[upper.tri(M,T)] <- 0
+    M <- matrix(TRUE,nrow=ncol(X),ncol=ncol(X)) 
+    M[upper.tri(M,TRUE)] <- 0
     colnames(M) <- colnames(X) 
     rownames(M) <- colnames(X) 
   } 
@@ -182,10 +190,9 @@ isr <- function(X, M, Xinit, mi=1, burnIn=100, thinning=20, intercept=T) {
     as.integer(mi)            # 13
   )
 
-  result.debug <<- r.result
 
   E <- r.result[[10]]
-  #colnames(E) <- colnames(M) 
+  
   S <- matrix( r.result[[9]], nrow=n*mi )  
 
   E <- array(E,dim=c(ncol(M)+1,nrow(M),mi),

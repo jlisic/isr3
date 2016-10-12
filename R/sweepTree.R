@@ -1,9 +1,3 @@
-#' Sweep Tree Function
-#' 
-#' \code{sweepTree} performs multiple sequences of sweep operations. To increase
-#' computational stability no reverse sweeps are performed.  Instead this function
-#' uses a binary tree and caching to reduce computational burden.
-#' @useDynLib ISR3
 
 
 sweepTree <- function( V, M,df=NCOL(V) ) {
@@ -47,17 +41,17 @@ sweepTree <- function( V, M,df=NCOL(V) ) {
 #  print(M)
   
   r.result <- .C("RSweepTree",
-    as.double(V[lower.tri(V,T)]), 
+    as.double(V[lower.tri(V,TRUE)]), 
     as.integer(c(t(M))),
     as.integer(regIndex -1),
     as.double(rep(0,m[1]*(p[1]+1))), # estimate
     as.integer(mapIndex-1), 
     as.integer(p[1]),
     as.integer(m[1]),
-    as.integer(n)
+    as.integer(df)
   )
 
-  E <- matrix( r.result[[4]] ,ncol=p[1]+1,byrow=T) 
+  E <- matrix( r.result[[4]] ,ncol=p[1]+1,byrow=TRUE) 
   E <- E * cbind(M,1)
 
   return(E) 

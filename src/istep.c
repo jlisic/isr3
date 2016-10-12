@@ -238,7 +238,7 @@ void Risr(
      *  b = 3
      *  p = 6
      *
-     *       B_1 CoVar1 CoVar2 Var1 Var2 Var3 Sigma
+     *       B_0 CoVar1 CoVar2 Var1 Var2 Var3 Sigma
      * Var1  0   1      2      3    4    5    6
      * Var2  7   8      9     10   11   12   13
      * Var3 14  15     16     17   18   19   20
@@ -360,13 +360,9 @@ void Risr(
       }
     }
 
-//    Rprintf("X_tmp %d\n",iter);
-//    RprintMatrixDouble( X_tmp , n, b ); 
-
     // save result
     if( iter >= *maxIter) { 
       if( (iter - (*maxIter) ) % (*sampleRate) == 0) {
-        //printf("iter = %d\n", iter);
         for(i=0;i<n*b;i++) S_tmp[i] = X_tmp[i];
         S_tmp   = S_tmp + n*b;
         est_tmp = est_tmp + b*(p+1); 
@@ -374,7 +370,6 @@ void Risr(
       }
     }
   }
-  //printf("done %d\n", tmp);
    
   // not really needed, but good practice 
   X_tmp = NULL;

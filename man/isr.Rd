@@ -59,6 +59,7 @@ The ISR algorithm performs Bayesian multivariate normal imputation.  This imputa
 set.seed(100)
 n <- 30
 p <- 5 
+missing <- 10
 
 # generate a covar matrix
 covarMatrix <- rWishart(1,p+1,diag(p))[,,1]
@@ -67,6 +68,9 @@ covarMatrix <- rWishart(1,p+1,diag(p))[,,1]
 U <- chol(covarMatrix)
 
 X <- matrix(rnorm(n*p), nrow=n) \%*\% U
+
+# make some data missing
+X[sample(1:(n*p),size=missing)] <- NA
 
 # specify relationships
 fitMatrix <- matrix( c( 

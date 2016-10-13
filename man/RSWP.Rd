@@ -20,7 +20,7 @@ The reverse swept matrix \code{V}.  Reverse sweeping will not occur if the
 \code{RSWP} performs the reverse sweep operator.
 }
 \details{
-This program applies the the reverse sweep operator as defined in 
+This program applies the reverse sweep operator as defined in 
   (Dempster 1969).
 }
 \examples{

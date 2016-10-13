@@ -20,7 +20,7 @@ The swept matrix \code{V}.  Sweeping will not occur if the column
 \code{SWP} performs the sweep operator.
 }
 \details{
-This program applies the the sweep operator as defined in (Dempster 1969).
+This program applies the sweep operator as defined in (Dempster 1969).
 }
 \examples{
 set.seed(100)

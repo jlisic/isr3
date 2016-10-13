@@ -85,10 +85,10 @@ void VSWP(
 
   // allocate if needed
   if( x == NULL) {
-    x = calloc( sizeof(double *), N );
-    y = calloc( sizeof(double *), N );
-    z = calloc( sizeof(double *), n);
-    row = calloc(sizeof( int * ), n);
+    x = calloc( N, sizeof(double));
+    y = calloc( N, sizeof(double));
+    z = calloc( n, sizeof(double));
+    row = calloc(n, sizeof( int ));
 
     // reduce row calculations
     row[0] = 0;
@@ -178,10 +178,10 @@ void VRevSWP(
 
   // allocate if needed
   if( x == NULL) {
-    x = calloc( sizeof(double *), N );
-    y = calloc( sizeof(double *), N );
-    z = calloc( sizeof(double *), n);
-    row = calloc(sizeof( int * ), n);
+    x = calloc(N, sizeof(double));
+    y = calloc(N, sizeof(double));
+    z = calloc(N, sizeof(double));
+    row = calloc(n, sizeof(int));
 
     // reduce row calculations
     row[0] = 0;
@@ -362,9 +362,9 @@ void saveParameterEstimates(
       }
     }
 
-    var = calloc( sizeof( double ), (m*(m+1))/2 );
-    mean  = calloc( sizeof( double ), m);
-    sample = calloc( sizeof( double ), m);
+    var    = calloc( (m*(m+1))/2, sizeof(double) );
+    mean   = calloc( m, sizeof( double ));
+    sample = calloc( m, sizeof( double ));
 
     conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/rchisq(df - m); 
     //conditionalVar = -1.0 * V[i*k - (i)*(i-1)/2]/(double)(df - m);
@@ -432,7 +432,7 @@ void ArMVN(
  ) {
   int i,j,k,l;
   int n = ((size+1)*(size+2))/2;
-  double * S = calloc( sizeof(double), n);
+  double * S = calloc(n, sizeof(double));
   double conditionalMean;
     
   /* draw from mult. normal using SWP */
@@ -540,7 +540,7 @@ void sweepTree(
      /  \      \
   */
   if( (x->yes != NULL) & (x->no != NULL) ) {
-    matrixCache[x->cacheIndex] = calloc( sizeof(double), (k*(k+1))/2 );
+    matrixCache[x->cacheIndex] = calloc((k*(k+1))/2, sizeof(double) );
     copyCovarMatrix(matrixCache[x->cacheIndex],V,k);
   }
 
@@ -603,7 +603,7 @@ void RSweepTree(
   }
 
   // allocate space for the cache
-  cache = calloc( sizeof(double *) , cacheSize+1 );
+  cache = calloc( cacheSize+1, sizeof(double *));
 
   // estimate parameters for model through tree
   sweepTree(myTree, x, p, cache, index, est, M,*n);
@@ -665,10 +665,10 @@ int main( void ) {
   //printf("Printing Tree\n");
   //printCovarTree(myTree);
 
-  est = calloc( sizeof(double), m * (n+1) );
+  est = calloc( m * (n+1), sizeof(double) );
 
   //printf("Cache Size = %d\n",cacheSize);
-  cache = calloc( sizeof(double *) , cacheSize+1 );
+  cache = calloc( cacheSize+1, sizeof(double *) );
   sweepTree(myTree, x, 5, cache, index, est,NULL,0);
 
 
@@ -693,8 +693,8 @@ int main() {
   int n = 5;
   int i;
 
-  double * v = calloc(sizeof(double), (n*(n+1))/2);
-  double * x = calloc(sizeof(double), n*n);
+  double * v = calloc((n*(n+1))/2, sizeof(double));
+  double * x = calloc(n*n, sizeof(double));
 
 
   for( i=0; i < n*n; i++) x[i] = i+1; 

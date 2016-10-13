@@ -7,7 +7,7 @@
 #' @param b An array of integers or column names to sweep.
 #' @return The swept matrix \code{V}.  Sweeping will not occur if the column
 #'   being swept has a zero-valued diagonal element.
-#' @details This program applies the the sweep operator as defined in (Dempster 1969).  
+#' @details This program applies the sweep operator as defined in (Dempster 1969).  
 #' @examples 
 #' set.seed(100)
 #' # generate a symmetric positive definite matrix
@@ -52,7 +52,7 @@ SWP <- function( V, b ) {
 #' @param b An array of integers or column names to reverse sweep.
 #' @return The reverse swept matrix \code{V}.  Reverse sweeping will not occur if the 
 #'   column being swept has a zero-valued diagonal element.
-#' @details This program applies the the reverse sweep operator as defined in 
+#' @details This program applies the reverse sweep operator as defined in 
 #'   (Dempster 1969).  
 #' @examples 
 #' set.seed(100)

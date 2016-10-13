@@ -9,7 +9,7 @@ Authors@R: c(
 BugReports: https://github.com/jlisic/isr3/issues
 Maintainer: Jonathan Lisic <jonathan.lisic@nass.usda.gov>
 Description:  Performs multivariate normal imputation through iterative sequential 
-  regression.  Conditional dependancy structure between imputed variables can be 
+  regression.  Conditional dependency structure between imputed variables can be 
   specified a priori to accelerate imputation.
 Depends: R (>= 3.0.2)
 License: Unlimited 
